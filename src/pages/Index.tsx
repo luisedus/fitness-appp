@@ -1,13 +1,30 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { getSession, type AuthUser } from '../lib/auth';
+import { LoginScreen } from '../components/LoginScreen';
+import { Dashboard } from '../components/Dashboard';
+import { ToastContainer, useToasts } from '../components/ToastSystem';
 
 const Index = () => {
+  const [user, setUser] = useState<AuthUser | null>(getSession);
+  const { toasts, addToast, removeToast } = useToasts();
+
+  const handleLogin = () => {
+    setUser(getSession());
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      {user ? (
+        <Dashboard user={user} onLogout={handleLogout} addToast={addToast} />
+      ) : (
+        <LoginScreen onLogin={handleLogin} addToast={addToast} />
+      )}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </>
   );
 };
 
