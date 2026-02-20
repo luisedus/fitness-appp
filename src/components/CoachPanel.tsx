@@ -6,6 +6,7 @@ import { type AuthUser } from '../lib/auth';
 interface CoachPanelProps {
   user: AuthUser;
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  globalSearch?: string;
 }
 
 const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
@@ -14,7 +15,7 @@ const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
   Pro: ['Sentadilla búlgara', 'Muscle-up', 'Clean & Press', 'Snatch', 'Pistol Squat', 'Sprint 100m x8'],
 };
 
-export function CoachPanel({ user, addToast }: CoachPanelProps) {
+export function CoachPanel({ user, addToast, globalSearch = '' }: CoachPanelProps) {
   const [routines, setRoutines] = useState<Routine[]>(getRoutines);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -22,6 +23,12 @@ export function CoachPanel({ user, addToast }: CoachPanelProps) {
   const [sortAsc, setSortAsc] = useState(true);
   const [filterLevel, setFilterLevel] = useState<'Todos' | Routine['level']>('Todos');
   const [filterGender, setFilterGender] = useState<'todos' | 'hombre' | 'mujer'>('todos');
+  const [localSearch, setLocalSearch] = useState('');
+
+  const isCoach = user.role === 'coach';
+
+  // Combined search: navbar global OR local panel search
+  const activeSearch = globalSearch || localSearch;
 
   const emptyForm = { title: '', description: '', level: 'Principiante' as Routine['level'], gender: 'todos' as Routine['gender'], exercises: [''] };
   const [form, setForm] = useState(emptyForm);
@@ -31,11 +38,24 @@ export function CoachPanel({ user, addToast }: CoachPanelProps) {
 
   const sorted = useMemo(() => {
     let list = [...routines];
+
+    // Advanced search: title, description, exercises, level, coach name
+    if (activeSearch.trim()) {
+      const q = activeSearch.toLowerCase().trim();
+      list = list.filter(r =>
+        r.title.toLowerCase().includes(q) ||
+        r.description.toLowerCase().includes(q) ||
+        r.exercises.some(ex => ex.toLowerCase().includes(q)) ||
+        r.level.toLowerCase().includes(q) ||
+        r.coachName.toLowerCase().includes(q)
+      );
+    }
+
     if (filterLevel !== 'Todos') list = list.filter(r => r.level === filterLevel);
     if (filterGender !== 'todos') list = list.filter(r => r.gender === filterGender || r.gender === 'todos');
     list.sort((a, b) => sortAsc ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title));
     return list;
-  }, [routines, filterLevel, filterGender, sortAsc]);
+  }, [routines, filterLevel, filterGender, sortAsc, activeSearch]);
 
   const validateForm = () => {
     const errs: Record<string, string> = {};
@@ -91,37 +111,68 @@ export function CoachPanel({ user, addToast }: CoachPanelProps) {
 
   return (
     <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', color: 'hsl(var(--foreground))' }}>
-            MIS <span style={{ color: 'hsl(var(--neon))' }}>RUTINAS</span>
+            {isCoach ? 'MIS ' : ''}<span style={{ color: 'hsl(var(--neon))' }}>RUTINAS</span>
           </h2>
           <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>
-            {sorted.length} rutina{sorted.length !== 1 ? 's' : ''} publicada{sorted.length !== 1 ? 's' : ''}
+            {sorted.length} rutina{sorted.length !== 1 ? 's' : ''} encontrada{sorted.length !== 1 ? 's' : ''}
+            {activeSearch && <span style={{ color: 'hsl(var(--neon))', marginLeft: '0.4rem' }}>— "{activeSearch}"</span>}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button className="btn-ghost" onClick={() => setSortAsc(a => !a)} style={{ fontSize: '0.8rem' }}>
             A-Z {sortAsc ? '↑' : '↓'}
           </button>
-          <button
-            className="btn-neon"
-            onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm); setFormErrors({}); }}
-          >
-            {showForm ? '✕ CANCELAR' : '+ NUEVA RUTINA'}
-          </button>
+          {isCoach && (
+            <button
+              className="btn-neon"
+              onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm); setFormErrors({}); }}
+            >
+              {showForm ? '✕ CANCELAR' : '+ NUEVA RUTINA'}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters row */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          {(['todos', 'hombre', 'mujer'] as const).map(g => (
-            <button key={g} className={`filter-chip ${filterGender === g ? 'active' : 'inactive'}`} onClick={() => setFilterGender(g)}>
-              {g === 'todos' ? 'Todos' : g === 'hombre' ? '♂ Hombre' : '♀ Mujer'}
-            </button>
-          ))}
-        </div>
+        {/* Local search (visible when no global search active) */}
+        {!globalSearch && (
+          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--smoke))', fontSize: '0.9rem' }}>🔍</span>
+            <input
+              className="input-dark"
+              type="text"
+              placeholder="Buscar por título, ejercicio, coach..."
+              value={localSearch}
+              onChange={e => setLocalSearch(e.target.value)}
+              style={{ paddingLeft: '2.4rem', paddingRight: localSearch ? '2rem' : undefined }}
+            />
+            {localSearch && (
+              <button
+                onClick={() => setLocalSearch('')}
+                style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Gender filter — only for coaches */}
+        {isCoach && (
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            {(['todos', 'hombre', 'mujer'] as const).map(g => (
+              <button key={g} className={`filter-chip ${filterGender === g ? 'active' : 'inactive'}`} onClick={() => setFilterGender(g)}>
+                {g === 'todos' ? 'Todos' : g === 'hombre' ? '♂ Hombre' : '♀ Mujer'}
+              </button>
+            ))}
+          </div>
+        )}
+
         <select
           className="input-dark"
           style={{ width: 'auto', minWidth: '160px' }}
@@ -135,9 +186,9 @@ export function CoachPanel({ user, addToast }: CoachPanelProps) {
         </select>
       </div>
 
-      {/* Form */}
+      {/* Form (coach only) */}
       <AnimatePresence>
-        {showForm && (
+        {showForm && isCoach && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -281,10 +332,33 @@ export function CoachPanel({ user, addToast }: CoachPanelProps) {
 
       {/* Routine Cards */}
       {sorted.length === 0 ? (
-        <div className="glass-card" style={{ borderRadius: '0.75rem', padding: '3rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
-          <p style={{ color: 'hsl(var(--smoke))' }}>No hay rutinas publicadas aún. ¡Crea la primera!</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card"
+          style={{ borderRadius: '0.75rem', padding: '4rem 2rem', textAlign: 'center' }}
+        >
+          <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>
+            {activeSearch ? '🔍' : '📋'}
+          </div>
+          {activeSearch ? (
+            <>
+              <p style={{ color: 'hsl(var(--foreground))', fontWeight: '600', fontSize: '1rem', marginBottom: '0.4rem' }}>
+                Sin resultados para "{activeSearch}"
+              </p>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                Intenta con otro término: nombre de ejercicio, nivel o coach.
+              </p>
+              <button className="btn-ghost" style={{ fontSize: '0.82rem' }} onClick={() => { setLocalSearch(''); }}>
+                Limpiar búsqueda
+              </button>
+            </>
+          ) : (
+            <p style={{ color: 'hsl(var(--smoke))' }}>
+              No hay rutinas publicadas aún. {isCoach ? '¡Crea la primera!' : ''}
+            </p>
+          )}
+        </motion.div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
           <AnimatePresence>
@@ -294,17 +368,20 @@ export function CoachPanel({ user, addToast }: CoachPanelProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: i * 0.05 }}
+                transition={{ delay: i * 0.04 }}
                 className="glass-card"
                 style={{ borderRadius: '0.75rem', padding: '1.25rem', border: '1px solid hsl(var(--border))' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <span className={levelBadgeClass(r.level)} style={{ marginBottom: '0.5rem', display: 'inline-flex' }}>{r.level}</span>
-                    <h4 style={{ fontWeight: '700', color: 'hsl(var(--foreground))', fontSize: '0.95rem', marginTop: '0.4rem' }}>{r.title}</h4>
+                    <h4 style={{ fontWeight: '700', color: 'hsl(var(--foreground))', fontSize: '0.95rem', marginTop: '0.4rem', lineHeight: '1.3' }}>{r.title}</h4>
+                    <div style={{ fontSize: '0.72rem', color: 'hsl(var(--neon) / 0.7)', marginTop: '0.2rem' }}>
+                      por {r.coachName}
+                    </div>
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: 'hsl(var(--smoke))', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
-                    {r.gender === 'todos' ? '♻ Todos' : r.gender === 'hombre' ? '♂' : '♀'}
+                  <span style={{ fontSize: '0.72rem', color: 'hsl(var(--smoke))', whiteSpace: 'nowrap', marginLeft: '0.5rem', flexShrink: 0 }}>
+                    {r.gender === 'todos' ? '♻ Todos' : r.gender === 'hombre' ? '♂ Hombre' : '♀ Mujer'}
                   </span>
                 </div>
                 <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.82rem', marginBottom: '0.75rem', lineHeight: '1.5' }}>
@@ -333,10 +410,12 @@ export function CoachPanel({ user, addToast }: CoachPanelProps) {
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.72rem', color: 'hsl(var(--smoke))' }}>📅 {r.createdAt}</span>
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button className="btn-edit" onClick={() => handleEdit(r)}>Editar</button>
-                    <button className="btn-danger" onClick={() => setConfirmDeleteId(r.id)}>Eliminar</button>
-                  </div>
+                  {isCoach && (
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button className="btn-edit" onClick={() => handleEdit(r)}>Editar</button>
+                      <button className="btn-danger" onClick={() => setConfirmDeleteId(r.id)}>Eliminar</button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}

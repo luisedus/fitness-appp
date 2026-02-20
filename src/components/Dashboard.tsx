@@ -68,30 +68,25 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
           <span style={{ color: 'hsl(var(--neon))' }}>'S</span>
         </div>
 
-        {/* Gender Filter Chips */}
-        <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-          {(['todos', 'hombre', 'mujer'] as const).map(g => (
-            <button
-              key={g}
-              className={`filter-chip ${genderFilter === g ? 'active' : 'inactive'}`}
-              onClick={() => setGenderFilter(g)}
-            >
-              {g === 'todos' ? 'TODOS' : g === 'hombre' ? 'HOMBRE' : 'MUJER'}
-            </button>
-          ))}
-        </div>
-
         {/* Search */}
-        <div style={{ flex: 1, maxWidth: '380px', position: 'relative', minWidth: '140px' }}>
-          <span style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.9rem', opacity: 0.5 }}>🔍</span>
+        <div style={{ flex: 1, maxWidth: '420px', position: 'relative', minWidth: '160px' }}>
+          <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.9rem', opacity: 0.5 }}>🔍</span>
           <input
             className="input-dark"
             type="text"
-            placeholder="Buscar ejercicios (todos)..."
+            placeholder={tab === 'members' ? 'Buscar socio...' : 'Buscar rutina, ejercicio, coach...'}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ paddingRight: '2.2rem', height: '36px', padding: '0 2.2rem 0 0.85rem' }}
+            style={{ paddingLeft: '2.2rem', height: '36px' }}
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--smoke))', fontSize: '0.85rem', lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Nav Links */}
@@ -306,7 +301,7 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
             >
-              <CoachPanel user={user} addToast={addToast} />
+              <CoachPanel user={user} addToast={addToast} globalSearch={search} />
             </motion.div>
           )}
         </AnimatePresence>
