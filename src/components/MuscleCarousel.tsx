@@ -7,17 +7,17 @@ interface MuscleCarouselProps {
 }
 
 const MUSCLE_GROUPS = [
-  { name: 'Pecho', emoji: '🫁', gradient: 'linear-gradient(135deg, #1a3a2a, #0d5c3a)' },
-  { name: 'Espalda', emoji: '🔙', gradient: 'linear-gradient(135deg, #1a2a3a, #0d3c5c)' },
-  { name: 'Hombros', emoji: '💪', gradient: 'linear-gradient(135deg, #2a1a3a, #5c0d4c)' },
-  { name: 'Bíceps', emoji: '💪', gradient: 'linear-gradient(135deg, #3a2a1a, #5c3c0d)' },
-  { name: 'Tríceps', emoji: '🦾', gradient: 'linear-gradient(135deg, #1a3a1a, #0d5c0d)' },
-  { name: 'Abdomen', emoji: '🧱', gradient: 'linear-gradient(135deg, #3a1a1a, #5c0d0d)' },
-  { name: 'Glúteos', emoji: '🍑', gradient: 'linear-gradient(135deg, #3a2a2a, #5c2d1d)' },
-  { name: 'Cuádriceps', emoji: '🦵', gradient: 'linear-gradient(135deg, #1a2a2a, #0d4c4c)' },
-  { name: 'Isquiotibiales', emoji: '🦿', gradient: 'linear-gradient(135deg, #2a2a1a, #4c4c0d)' },
-  { name: 'Gemelos', emoji: '🏃', gradient: 'linear-gradient(135deg, #2a1a2a, #4c0d4c)' },
-  { name: 'Full Body', emoji: '🏋️', gradient: 'linear-gradient(135deg, #0a2a1a, #00ff88)' },
+  { name: 'Pecho', image: '/muscles/pecho.jpg' },
+  { name: 'Espalda', image: '/muscles/espalda.jpg' },
+  { name: 'Hombros', image: '/muscles/hombros.jpg' },
+  { name: 'Bíceps', image: '/muscles/biceps.jpg' },
+  { name: 'Tríceps', image: '/muscles/triceps.jpg' },
+  { name: 'Abdomen', image: '/muscles/abdomen.jpg' },
+  { name: 'Glúteos', image: '/muscles/gluteos.jpg' },
+  { name: 'Cuádriceps', image: '/muscles/cuadriceps.jpg' },
+  { name: 'Isquiotibiales', image: '/muscles/isquiotibiales.jpg' },
+  { name: 'Gemelos', image: '/muscles/gemelos.jpg' },
+  { name: 'Full Body', image: '/muscles/fullbody.jpg' },
 ];
 
 export function MuscleCarousel({ onSelectMuscle, activeMuscle }: MuscleCarouselProps) {
@@ -60,70 +60,36 @@ export function MuscleCarousel({ onSelectMuscle, activeMuscle }: MuscleCarouselP
       </h3>
 
       <div style={{ position: 'relative' }}>
-        {/* Scroll buttons */}
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
             style={{
-              position: 'absolute',
-              left: 0,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 10,
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              background: 'hsl(var(--graphite) / 0.95)',
-              border: '1px solid hsl(var(--neon) / 0.4)',
-              color: 'hsl(var(--neon))',
-              cursor: 'pointer',
-              fontSize: '1.1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backdropFilter: 'blur(8px)',
+              position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 10,
+              width: '36px', height: '36px', borderRadius: '50%',
+              background: 'hsl(var(--graphite) / 0.95)', border: '1px solid hsl(var(--neon) / 0.4)',
+              color: 'hsl(var(--neon))', cursor: 'pointer', fontSize: '1.1rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)',
             }}
-          >
-            ‹
-          </button>
+          >‹</button>
         )}
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
             style={{
-              position: 'absolute',
-              right: 0,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 10,
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              background: 'hsl(var(--graphite) / 0.95)',
-              border: '1px solid hsl(var(--neon) / 0.4)',
-              color: 'hsl(var(--neon))',
-              cursor: 'pointer',
-              fontSize: '1.1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backdropFilter: 'blur(8px)',
+              position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 10,
+              width: '36px', height: '36px', borderRadius: '50%',
+              background: 'hsl(var(--graphite) / 0.95)', border: '1px solid hsl(var(--neon) / 0.4)',
+              color: 'hsl(var(--neon))', cursor: 'pointer', fontSize: '1.1rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)',
             }}
-          >
-            ›
-          </button>
+          >›</button>
         )}
 
-        {/* Cards container */}
         <div
           ref={scrollRef}
           style={{
-            display: 'flex',
-            gap: '0.85rem',
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            padding: '0.25rem 0',
-            scrollSnapType: 'x mandatory',
+            display: 'flex', gap: '0.85rem', overflowX: 'auto', scrollbarWidth: 'none',
+            padding: '0.25rem 0', scrollSnapType: 'x mandatory',
           }}
         >
           {MUSCLE_GROUPS.map((mg) => {
@@ -135,38 +101,44 @@ export function MuscleCarousel({ onSelectMuscle, activeMuscle }: MuscleCarouselP
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onSelectMuscle(isActive ? '' : mg.name)}
                 style={{
-                  flexShrink: 0,
-                  width: '130px',
-                  height: '150px',
-                  borderRadius: '0.85rem',
-                  background: mg.gradient,
+                  flexShrink: 0, width: '140px', height: '180px', borderRadius: '0.85rem',
                   border: isActive ? '2px solid hsl(var(--neon))' : '1px solid hsl(var(--border))',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.6rem',
-                  scrollSnapAlign: 'start',
-                  position: 'relative',
-                  overflow: 'hidden',
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'flex-end',
+                  scrollSnapAlign: 'start', position: 'relative', overflow: 'hidden',
+                  padding: 0, background: 'transparent',
                   boxShadow: isActive
                     ? '0 0 20px hsl(var(--neon) / 0.35), inset 0 0 30px hsl(var(--neon) / 0.1)'
                     : '0 4px 16px rgba(0,0,0,0.4)',
                   transition: 'border-color 0.2s, box-shadow 0.3s',
                 }}
               >
-                <span style={{ fontSize: '2.4rem', filter: isActive ? 'brightness(1.3)' : undefined }}>
-                  {mg.emoji}
-                </span>
+                {/* Background image */}
+                <img
+                  src={mg.image}
+                  alt={mg.name}
+                  style={{
+                    position: 'absolute', inset: 0, width: '100%', height: '100%',
+                    objectFit: 'cover',
+                    filter: isActive ? 'brightness(0.7) saturate(1.2)' : 'brightness(0.45) saturate(0.8)',
+                    transition: 'filter 0.3s',
+                  }}
+                />
+                {/* Gradient overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: isActive
+                    ? 'linear-gradient(to top, hsl(var(--neon) / 0.4) 0%, transparent 60%)'
+                    : 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)',
+                }} />
+                {/* Label */}
                 <span style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '0.95rem',
+                  position: 'relative', zIndex: 2,
+                  fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem',
                   letterSpacing: '0.06em',
                   color: isActive ? 'hsl(var(--neon))' : 'hsl(var(--foreground))',
-                  textAlign: 'center',
-                  lineHeight: 1.1,
-                  padding: '0 0.3rem',
+                  textAlign: 'center', lineHeight: 1.1, padding: '0.6rem 0.3rem',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.8)',
                 }}>
                   {mg.name}
                 </span>
@@ -175,12 +147,8 @@ export function MuscleCarousel({ onSelectMuscle, activeMuscle }: MuscleCarouselP
                   <motion.div
                     layoutId="muscle-active"
                     style={{
-                      position: 'absolute',
-                      bottom: '6px',
-                      width: '24px',
-                      height: '3px',
-                      borderRadius: '2px',
-                      background: 'hsl(var(--neon))',
+                      position: 'absolute', bottom: '6px', width: '24px', height: '3px',
+                      borderRadius: '2px', background: 'hsl(var(--neon))', zIndex: 3,
                     }}
                   />
                 )}
@@ -194,12 +162,7 @@ export function MuscleCarousel({ onSelectMuscle, activeMuscle }: MuscleCarouselP
         <motion.div
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{
-            marginTop: '0.75rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
+          style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           <span style={{ fontSize: '0.8rem', color: 'hsl(var(--smoke))' }}>
             Filtrando por: <strong style={{ color: 'hsl(var(--neon))' }}>{activeMuscle}</strong>
@@ -207,13 +170,9 @@ export function MuscleCarousel({ onSelectMuscle, activeMuscle }: MuscleCarouselP
           <button
             onClick={() => onSelectMuscle('')}
             style={{
-              background: 'hsl(var(--neon) / 0.1)',
-              border: '1px solid hsl(var(--neon) / 0.3)',
-              color: 'hsl(var(--neon))',
-              borderRadius: '9999px',
-              padding: '0.15rem 0.6rem',
-              fontSize: '0.72rem',
-              cursor: 'pointer',
+              background: 'hsl(var(--neon) / 0.1)', border: '1px solid hsl(var(--neon) / 0.3)',
+              color: 'hsl(var(--neon))', borderRadius: '9999px',
+              padding: '0.15rem 0.6rem', fontSize: '0.72rem', cursor: 'pointer',
             }}
           >
             ✕ Quitar filtro
