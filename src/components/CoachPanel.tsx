@@ -7,7 +7,22 @@ interface CoachPanelProps {
   user: AuthUser;
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
   globalSearch?: string;
+  muscleFilter?: string;
 }
+
+const MUSCLE_KEYWORDS: Record<string, string[]> = {
+  'Pecho': ['pecho', 'press de banca', 'press', 'flexiones', 'aperturas', 'fondos', 'chest', 'bench'],
+  'Espalda': ['espalda', 'remo', 'dominadas', 'jalón', 'pull', 'dorsal', 'back'],
+  'Hombros': ['hombros', 'press militar', 'elevaciones laterales', 'deltoides', 'shoulder'],
+  'Bíceps': ['bíceps', 'biceps', 'curl', 'martillo'],
+  'Tríceps': ['tríceps', 'triceps', 'fondos', 'extensión', 'extensiones', 'press francés'],
+  'Abdomen': ['abdomen', 'abdominal', 'plancha', 'crunch', 'core', 'oblicuos', 'torsión'],
+  'Glúteos': ['glúteo', 'gluteo', 'hip thrust', 'patadas', 'abducción', 'sentadilla sumo', 'glúteos'],
+  'Cuádriceps': ['cuádriceps', 'cuadriceps', 'sentadilla', 'zancadas', 'estocadas', 'prensa', 'extensión de pierna', 'squat'],
+  'Isquiotibiales': ['isquiotibiales', 'curl de isquio', 'peso muerto rumano', 'femoral', 'isquio'],
+  'Gemelos': ['gemelos', 'pantorrilla', 'elevación de talón', 'calf'],
+  'Full Body': ['fullbody', 'full body', 'cuerpo completo', 'funcional', 'burpees', 'crossfit', 'hiit', 'metcon'],
+};
 
 const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
   Principiante: ['Sentadillas', 'Flexiones', 'Plancha 30s', 'Jumping Jacks', 'Curl de bíceps', 'Caminar 20 min'],
@@ -15,7 +30,7 @@ const EXERCISE_SUGGESTIONS: Record<string, string[]> = {
   Pro: ['Sentadilla búlgara', 'Muscle-up', 'Clean & Press', 'Snatch', 'Pistol Squat', 'Sprint 100m x8'],
 };
 
-export function CoachPanel({ user, addToast, globalSearch = '' }: CoachPanelProps) {
+export function CoachPanel({ user, addToast, globalSearch = '', muscleFilter = '' }: CoachPanelProps) {
   const [routines, setRoutines] = useState<Routine[]>(getRoutines);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -51,11 +66,20 @@ export function CoachPanel({ user, addToast, globalSearch = '' }: CoachPanelProp
       );
     }
 
+    // Muscle group filter
+    if (muscleFilter && MUSCLE_KEYWORDS[muscleFilter]) {
+      const keywords = MUSCLE_KEYWORDS[muscleFilter];
+      list = list.filter(r => {
+        const blob = `${r.title} ${r.description} ${r.exercises.join(' ')}`.toLowerCase();
+        return keywords.some(kw => blob.includes(kw));
+      });
+    }
+
     if (filterLevel !== 'Todos') list = list.filter(r => r.level === filterLevel);
     if (filterGender !== 'todos') list = list.filter(r => r.gender === filterGender || r.gender === 'todos');
     list.sort((a, b) => sortAsc ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title));
     return list;
-  }, [routines, filterLevel, filterGender, sortAsc, activeSearch]);
+  }, [routines, filterLevel, filterGender, sortAsc, activeSearch, muscleFilter]);
 
   const validateForm = () => {
     const errs: Record<string, string> = {};

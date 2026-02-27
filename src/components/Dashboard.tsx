@@ -4,6 +4,7 @@ import { type AuthUser, logoutUser } from '../lib/auth';
 import { type Member, updateMember } from '../lib/data';
 import { MemberManager } from './MemberManager';
 import { CoachPanel } from './CoachPanel';
+import { MuscleCarousel } from './MuscleCarousel';
 
 interface DashboardProps {
   user: AuthUser;
@@ -21,6 +22,7 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
   const [levelChangeWarn, setLevelChangeWarn] = useState(false);
   const [pendingLevel, setPendingLevel] = useState<Member['level'] | null>(null);
   const [userLevel, setUserLevel] = useState<Member['level']>(user.level || 'Principiante');
+  const [muscleFilter, setMuscleFilter] = useState('');
 
   const handleLogout = () => {
     logoutUser();
@@ -301,7 +303,13 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
             >
-              <CoachPanel user={user} addToast={addToast} globalSearch={search} />
+              {!isCoach && (
+                <MuscleCarousel
+                  onSelectMuscle={(m) => setMuscleFilter(m)}
+                  activeMuscle={muscleFilter}
+                />
+              )}
+              <CoachPanel user={user} addToast={addToast} globalSearch={search} muscleFilter={muscleFilter} />
             </motion.div>
           )}
         </AnimatePresence>
