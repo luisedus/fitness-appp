@@ -86,7 +86,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     e.preventDefault();
     const errs = validateMember();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    const result = registerUser({
+    const result = startRegistration({
       name: memberData.name,
       email: memberData.email,
       password: memberData.password,
@@ -96,8 +96,9 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       level: memberData.level,
     });
     if (result.success) {
-      addToast('¡Cuenta creada! Ahora puedes iniciar sesión.', 'success');
-      setMode('login');
+      setPendingEmail(memberData.email);
+      alert(`📧 Código de verificación enviado a ${memberData.email}:\n\n🔑 ${result.code}\n\n(Simulación — en producción se enviaría por email real)`);
+      setMode('verify-otp');
     } else {
       addToast(result.message, 'error');
     }
@@ -107,7 +108,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     e.preventDefault();
     const errs = validateCoach();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    const result = registerUser({
+    const result = startRegistration({
       name: coachData.name,
       email: coachData.email,
       password: coachData.password,
@@ -117,11 +118,33 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       experience: coachData.experience,
     });
     if (result.success) {
-      addToast('¡Coach registrado! Ahora puedes iniciar sesión.', 'success');
-      setMode('login');
+      setPendingEmail(coachData.email);
+      alert(`📧 Código de verificación enviado a ${coachData.email}:\n\n🔑 ${result.code}\n\n(Simulación — en producción se enviaría por email real)`);
+      setMode('verify-otp');
     } else {
       addToast(result.message, 'error');
     }
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode.length !== 6) {
+      setErrors({ otp: 'El código debe tener 6 dígitos' });
+      return;
+    }
+    setLoading(true);
+    setTimeout(() => {
+      const result = verifyOtp(otpCode);
+      if (result.success) {
+        addToast('✅ ¡Cuenta verificada y creada! Ahora puedes iniciar sesión.', 'success');
+        setMode('login');
+        setOtpCode('');
+      } else {
+        addToast(result.message, 'error');
+        setErrors({ otp: result.message });
+      }
+      setLoading(false);
+    }, 600);
   };
 
   const FieldError = ({ field }: { field: string }) =>
