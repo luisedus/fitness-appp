@@ -16,6 +16,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [isVerifiedReg, setIsVerifiedReg] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [otpCode, setOtpCode] = useState('');
+  const [pendingEmail, setPendingEmail] = useState('');
 
   // Login form
   const [loginData, setLoginData] = useState({ email: '', password: '' });
