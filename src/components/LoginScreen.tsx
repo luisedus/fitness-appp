@@ -8,7 +8,7 @@ interface LoginScreenProps {
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach';
+type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-otp';
 
 export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
