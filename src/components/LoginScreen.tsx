@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { loginUser, registerUser, type UserRole } from '../lib/auth';
+import { loginUser, startRegistration, verifyOtp, type UserRole } from '../lib/auth';
 import { RobotVerify } from './RobotVerify';
 
 interface LoginScreenProps {
@@ -8,7 +8,7 @@ interface LoginScreenProps {
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach';
+type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-otp';
 
 export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
@@ -16,6 +16,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [isVerifiedReg, setIsVerifiedReg] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [otpCode, setOtpCode] = useState('');
+  const [pendingEmail, setPendingEmail] = useState('');
 
   // Login form
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -84,7 +86,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     e.preventDefault();
     const errs = validateMember();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    const result = registerUser({
+    const result = startRegistration({
       name: memberData.name,
       email: memberData.email,
       password: memberData.password,
@@ -94,8 +96,9 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       level: memberData.level,
     });
     if (result.success) {
-      addToast('¡Cuenta creada! Ahora puedes iniciar sesión.', 'success');
-      setMode('login');
+      setPendingEmail(memberData.email);
+      alert(`📧 Código de verificación enviado a ${memberData.email}:\n\n🔑 ${result.code}\n\n(Simulación — en producción se enviaría por email real)`);
+      setMode('verify-otp');
     } else {
       addToast(result.message, 'error');
     }
@@ -105,7 +108,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     e.preventDefault();
     const errs = validateCoach();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    const result = registerUser({
+    const result = startRegistration({
       name: coachData.name,
       email: coachData.email,
       password: coachData.password,
@@ -115,11 +118,33 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       experience: coachData.experience,
     });
     if (result.success) {
-      addToast('¡Coach registrado! Ahora puedes iniciar sesión.', 'success');
-      setMode('login');
+      setPendingEmail(coachData.email);
+      alert(`📧 Código de verificación enviado a ${coachData.email}:\n\n🔑 ${result.code}\n\n(Simulación — en producción se enviaría por email real)`);
+      setMode('verify-otp');
     } else {
       addToast(result.message, 'error');
     }
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode.length !== 6) {
+      setErrors({ otp: 'El código debe tener 6 dígitos' });
+      return;
+    }
+    setLoading(true);
+    setTimeout(() => {
+      const result = verifyOtp(otpCode);
+      if (result.success) {
+        addToast('✅ ¡Cuenta verificada y creada! Ahora puedes iniciar sesión.', 'success');
+        setMode('login');
+        setOtpCode('');
+      } else {
+        addToast(result.message, 'error');
+        setErrors({ otp: result.message });
+      }
+      setLoading(false);
+    }, 600);
   };
 
   const FieldError = ({ field }: { field: string }) =>
@@ -450,6 +475,62 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
               </form>
               <button className="btn-ghost" onClick={() => { setMode('register-select'); setErrors({}); }} style={{ width: '100%' }}>
                 ← Volver
+              </button>
+            </motion.div>
+          )}
+
+          {/* VERIFY OTP */}
+          {mode === 'verify-otp' && (
+            <motion.div
+              key="verify-otp"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -24 }}
+              transition={{ duration: 0.3 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '440px', borderRadius: '1rem', padding: '2.5rem 2rem', textAlign: 'center' }}
+            >
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📧</div>
+              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'hsl(var(--foreground))' }}>VERIFICAR </span>
+                <span style={{ color: 'hsl(var(--neon))' }}>EMAIL</span>
+              </h2>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '2rem' }}>
+                Ingresa el código de 6 dígitos enviado a{' '}
+                <strong style={{ color: 'hsl(var(--neon))' }}>{pendingEmail}</strong>
+              </p>
+              <form onSubmit={handleVerifyOtp} noValidate>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <input
+                    className="input-dark"
+                    type="text"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={otpCode}
+                    onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors({}); }}
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '2rem',
+                      letterSpacing: '0.5em',
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      ...(errors.otp ? { borderColor: 'hsl(var(--destructive))' } : {}),
+                    }}
+                  />
+                  {errors.otp && (
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      {errors.otp}
+                    </p>
+                  )}
+                </div>
+                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
+                  {loading ? 'VERIFICANDO...' : 'VERIFICAR CÓDIGO'}
+                </button>
+              </form>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                💡 El código apareció en un alert al registrarte (simulación)
+              </p>
+              <button className="btn-ghost" onClick={() => { setMode('register-select'); setErrors({}); setOtpCode(''); }} style={{ width: '100%' }}>
+                ← Volver al registro
               </button>
             </motion.div>
           )}

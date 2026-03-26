@@ -16,9 +16,38 @@ export interface AuthUser {
 }
 
 const SESSION_KEY = 'gymbros_session';
+const PENDING_OTP_KEY = 'gymbros_pending_otp';
 
 // Simulated user DB (stored in localStorage)
 const USERS_KEY = 'gymbros_users';
+
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export function startRegistration(data: Omit<AuthUser, 'id'> & { password: string }): { success: boolean; message: string; code?: string } {
+  const users = getUsers();
+  if (users.find(u => u.email === data.email)) {
+    return { success: false, message: 'El email ya está registrado.' };
+  }
+  const code = generateOtp();
+  localStorage.setItem(PENDING_OTP_KEY, JSON.stringify({ data, code }));
+  return { success: true, message: `Código de verificación enviado a ${data.email}`, code };
+}
+
+export function verifyOtp(inputCode: string): { success: boolean; message: string } {
+  try {
+    const pending = JSON.parse(localStorage.getItem(PENDING_OTP_KEY) || 'null');
+    if (!pending) return { success: false, message: 'No hay registro pendiente.' };
+    if (pending.code !== inputCode) return { success: false, message: 'Código incorrecto.' };
+    // Code matches — complete registration
+    const result = registerUser(pending.data);
+    localStorage.removeItem(PENDING_OTP_KEY);
+    return result;
+  } catch {
+    return { success: false, message: 'Error al verificar el código.' };
+  }
+}
 
 function getUsers(): AuthUser[] {
   try {
