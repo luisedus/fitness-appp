@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { loginUser, registerUser, type UserRole } from '../lib/auth';
+import { loginUser, startRegistration, verifyOtp, type UserRole } from '../lib/auth';
 import { RobotVerify } from './RobotVerify';
 
 interface LoginScreenProps {
