@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { type AuthUser, logoutUser } from '../lib/auth';
+import { type AuthUser, logoutUser, getSession } from '../lib/auth';
 import { type Member, updateMember } from '../lib/data';
 import { MemberManager } from './MemberManager';
 import { CoachPanel } from './CoachPanel';
 import { MuscleCarousel } from './MuscleCarousel';
+import { UserSettings } from './UserSettings';
+import { SSODemo } from './SSODemo';
 
 interface DashboardProps {
   user: AuthUser;
