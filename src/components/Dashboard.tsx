@@ -21,11 +21,13 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
   const [genderFilter, setGenderFilter] = useState<'todos' | 'hombre' | 'mujer'>('todos');
   const [search, setSearch] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showSSO, setShowSSO] = useState(false);
   const [levelChangeWarn, setLevelChangeWarn] = useState(false);
   const [pendingLevel, setPendingLevel] = useState<Member['level'] | null>(null);
   const [userLevel, setUserLevel] = useState<Member['level']>(user.level || 'Principiante');
   const [muscleFilter, setMuscleFilter] = useState('');
-
+  const [currentUser, setCurrentUser] = useState<AuthUser>(user);
   const handleLogout = () => {
     logoutUser();
     addToast('Sesión cerrada. ¡Hasta pronto! 👋', 'info');
