@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { loginUser, startRegistration, verifyOtp, type UserRole } from '../lib/auth';
+import { loginUser, startRegistration, verifyOtp, verifyMfaCode, type UserRole } from '../lib/auth';
 import { RobotVerify } from './RobotVerify';
+import { RecoveryFlow } from './RecoveryFlow';
 
 interface LoginScreenProps {
   onLogin: () => void;
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-otp';
+type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-otp' | 'mfa-verify' | 'recovery';
 
 export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
@@ -18,6 +19,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [otpCode, setOtpCode] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaPendingUser, setMfaPendingUser] = useState<string>('');
 
   // Login form
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -72,11 +75,34 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     setTimeout(() => {
       const result = loginUser(loginData.email, loginData.password);
       if (result.success) {
-        addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 💪`, 'success');
-        onLogin();
+        if (result.requiresMfa) {
+          setMfaPendingUser(result.user?.name || '');
+          alert(`🛡️ Código MFA enviado a tu email:\n\n🔑 ${result.message.split(': ')[1]}\n\n(Simulación)`);
+          setMode('mfa-verify');
+        } else {
+          addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 💪`, 'success');
+          onLogin();
+        }
       } else {
         addToast(result.message, 'error');
         setErrors({ general: result.message });
+      }
+      setLoading(false);
+    }, 600);
+  };
+
+  const handleMfaVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mfaCode.length !== 6) { setErrors({ mfa: 'El código debe tener 6 dígitos' }); return; }
+    setLoading(true);
+    setTimeout(() => {
+      const result = verifyMfaCode(mfaCode);
+      if (result.success) {
+        addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 🛡️💪`, 'success');
+        onLogin();
+      } else {
+        addToast(result.message, 'error');
+        setErrors({ mfa: result.message });
       }
       setLoading(false);
     }, 600);
@@ -286,6 +312,15 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                   style={{ color: 'hsl(var(--neon))', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
                 >
                   Regístrate
+                </button>
+              </div>
+
+              <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                <button
+                  onClick={() => setMode('recovery')}
+                  style={{ color: 'hsl(var(--smoke))', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                >
+                  ¿Olvidaste tu contraseña?
                 </button>
               </div>
 
@@ -533,6 +568,67 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                 ← Volver al registro
               </button>
             </motion.div>
+          )}
+
+          {/* MFA VERIFY */}
+          {mode === 'mfa-verify' && (
+            <motion.div
+              key="mfa-verify"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -24 }}
+              transition={{ duration: 0.3 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '440px', borderRadius: '1rem', padding: '2.5rem 2rem', textAlign: 'center' }}
+            >
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
+              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'hsl(var(--foreground))' }}>VERIFICACIÓN </span>
+                <span style={{ color: 'hsl(var(--neon))' }}>MFA</span>
+              </h2>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '2rem' }}>
+                Hola <strong style={{ color: 'hsl(var(--neon))' }}>{mfaPendingUser}</strong>, ingresa el código MFA de 6 dígitos
+              </p>
+              <form onSubmit={handleMfaVerify} noValidate>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <input
+                    className="input-dark"
+                    type="text"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={mfaCode}
+                    onChange={e => { setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors({}); }}
+                    style={{
+                      textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5em',
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      ...(errors.mfa ? { borderColor: 'hsl(var(--destructive))' } : {}),
+                    }}
+                  />
+                  {errors.mfa && (
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      {errors.mfa}
+                    </p>
+                  )}
+                </div>
+                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
+                  {loading ? 'VERIFICANDO...' : 'VERIFICAR MFA'}
+                </button>
+              </form>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                💡 El código apareció en un alert (simulación de email MFA)
+              </p>
+              <button className="btn-ghost" onClick={() => { setMode('login'); setMfaCode(''); setErrors({}); }} style={{ width: '100%' }}>
+                ← Volver al Login
+              </button>
+            </motion.div>
+          )}
+
+          {/* RECOVERY */}
+          {mode === 'recovery' && (
+            <RecoveryFlow
+              addToast={addToast}
+              onClose={() => setMode('login')}
+            />
           )}
         </AnimatePresence>
       </div>

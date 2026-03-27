@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { type AuthUser, logoutUser } from '../lib/auth';
+import { type AuthUser, logoutUser, getSession } from '../lib/auth';
 import { type Member, updateMember } from '../lib/data';
 import { MemberManager } from './MemberManager';
 import { CoachPanel } from './CoachPanel';
 import { MuscleCarousel } from './MuscleCarousel';
+import { UserSettings } from './UserSettings';
+import { SSODemo } from './SSODemo';
 
 interface DashboardProps {
   user: AuthUser;
@@ -19,11 +21,13 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
   const [genderFilter, setGenderFilter] = useState<'todos' | 'hombre' | 'mujer'>('todos');
   const [search, setSearch] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showSSO, setShowSSO] = useState(false);
   const [levelChangeWarn, setLevelChangeWarn] = useState(false);
   const [pendingLevel, setPendingLevel] = useState<Member['level'] | null>(null);
   const [userLevel, setUserLevel] = useState<Member['level']>(user.level || 'Principiante');
   const [muscleFilter, setMuscleFilter] = useState('');
-
+  const [currentUser, setCurrentUser] = useState<AuthUser>(user);
   const handleLogout = () => {
     logoutUser();
     addToast('Sesión cerrada. ¡Hasta pronto! 👋', 'info');
@@ -242,14 +246,54 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
               </div>
             )}
 
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+              <button
+                className="btn-edit"
+                style={{ flex: 1, textAlign: 'center', padding: '0.5rem', fontSize: '0.75rem' }}
+                onClick={() => { setShowSettings(true); setShowProfile(false); }}
+              >
+                ⚙️ Configuración
+              </button>
+              <button
+                className="btn-edit"
+                style={{ flex: 1, textAlign: 'center', padding: '0.5rem', fontSize: '0.75rem' }}
+                onClick={() => { setShowSSO(true); setShowProfile(false); }}
+              >
+                🔗 SSO Demo
+              </button>
+            </div>
+
             <button
               className="btn-danger"
-              style={{ width: '100%', marginTop: '1.25rem', textAlign: 'center', padding: '0.5rem' }}
+              style={{ width: '100%', marginTop: '0.5rem', textAlign: 'center', padding: '0.5rem' }}
               onClick={handleLogout}
             >
               Cerrar Sesión
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <UserSettings
+            user={currentUser}
+            onUserUpdate={(u) => setCurrentUser(u)}
+            addToast={addToast}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* SSO Demo Modal */}
+      <AnimatePresence>
+        {showSSO && (
+          <SSODemo
+            user={currentUser}
+            addToast={addToast}
+            onClose={() => setShowSSO(false)}
+          />
         )}
       </AnimatePresence>
 
