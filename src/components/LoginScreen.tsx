@@ -315,6 +315,15 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                 </button>
               </div>
 
+              <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                <button
+                  onClick={() => setMode('recovery')}
+                  style={{ color: 'hsl(var(--smoke))', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+
               <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'hsl(var(--neon) / 0.05)', borderRadius: '0.5rem', border: '1px solid hsl(var(--neon) / 0.2)' }}>
                 <p style={{ fontSize: '0.75rem', color: 'hsl(var(--smoke))', textAlign: 'center' }}>
                   🔑 Admin: <strong style={{ color: 'hsl(var(--neon))' }}>admin</strong> / <strong style={{ color: 'hsl(var(--neon))' }}>1234</strong>
