@@ -75,11 +75,34 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     setTimeout(() => {
       const result = loginUser(loginData.email, loginData.password);
       if (result.success) {
-        addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 💪`, 'success');
-        onLogin();
+        if (result.requiresMfa) {
+          setMfaPendingUser(result.user?.name || '');
+          alert(`🛡️ Código MFA enviado a tu email:\n\n🔑 ${result.message.split(': ')[1]}\n\n(Simulación)`);
+          setMode('mfa-verify');
+        } else {
+          addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 💪`, 'success');
+          onLogin();
+        }
       } else {
         addToast(result.message, 'error');
         setErrors({ general: result.message });
+      }
+      setLoading(false);
+    }, 600);
+  };
+
+  const handleMfaVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mfaCode.length !== 6) { setErrors({ mfa: 'El código debe tener 6 dígitos' }); return; }
+    setLoading(true);
+    setTimeout(() => {
+      const result = verifyMfaCode(mfaCode);
+      if (result.success) {
+        addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 🛡️💪`, 'success');
+        onLogin();
+      } else {
+        addToast(result.message, 'error');
+        setErrors({ mfa: result.message });
       }
       setLoading(false);
     }, 600);
