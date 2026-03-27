@@ -569,6 +569,67 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
               </button>
             </motion.div>
           )}
+
+          {/* MFA VERIFY */}
+          {mode === 'mfa-verify' && (
+            <motion.div
+              key="mfa-verify"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -24 }}
+              transition={{ duration: 0.3 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '440px', borderRadius: '1rem', padding: '2.5rem 2rem', textAlign: 'center' }}
+            >
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
+              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'hsl(var(--foreground))' }}>VERIFICACIÓN </span>
+                <span style={{ color: 'hsl(var(--neon))' }}>MFA</span>
+              </h2>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '2rem' }}>
+                Hola <strong style={{ color: 'hsl(var(--neon))' }}>{mfaPendingUser}</strong>, ingresa el código MFA de 6 dígitos
+              </p>
+              <form onSubmit={handleMfaVerify} noValidate>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <input
+                    className="input-dark"
+                    type="text"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={mfaCode}
+                    onChange={e => { setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors({}); }}
+                    style={{
+                      textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5em',
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      ...(errors.mfa ? { borderColor: 'hsl(var(--destructive))' } : {}),
+                    }}
+                  />
+                  {errors.mfa && (
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      {errors.mfa}
+                    </p>
+                  )}
+                </div>
+                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
+                  {loading ? 'VERIFICANDO...' : 'VERIFICAR MFA'}
+                </button>
+              </form>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                💡 El código apareció en un alert (simulación de email MFA)
+              </p>
+              <button className="btn-ghost" onClick={() => { setMode('login'); setMfaCode(''); setErrors({}); }} style={{ width: '100%' }}>
+                ← Volver al Login
+              </button>
+            </motion.div>
+          )}
+
+          {/* RECOVERY */}
+          {mode === 'recovery' && (
+            <RecoveryFlow
+              addToast={addToast}
+              onClose={() => setMode('login')}
+            />
+          )}
         </AnimatePresence>
       </div>
     </div>
