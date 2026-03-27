@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { loginUser, startRegistration, verifyOtp, type UserRole } from '../lib/auth';
+import { loginUser, startRegistration, verifyOtp, verifyMfaCode, type UserRole } from '../lib/auth';
 import { RobotVerify } from './RobotVerify';
+import { RecoveryFlow } from './RecoveryFlow';
 
 interface LoginScreenProps {
   onLogin: () => void;
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-otp';
+type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-otp' | 'mfa-verify' | 'recovery';
 
 export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
