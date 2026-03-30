@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type Member, getMembers, addMember, updateMember, deleteMember } from '../lib/data';
+import { blockUser, unblockUser, isUserBlocked, getBlockedUsers, type BlockRecord } from '../lib/blocking';
+import { getUsers, type AuthUser } from '../lib/auth';
 
 interface MemberManagerProps {
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
