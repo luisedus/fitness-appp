@@ -44,7 +44,7 @@ function simpleHash(str: string): string {
   return Math.abs(hash).toString(36);
 }
 
-function getUsers(): AuthUser[] {
+export function getUsers(): AuthUser[] {
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch { return []; }
 }
 
