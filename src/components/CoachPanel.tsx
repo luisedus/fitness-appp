@@ -95,6 +95,14 @@ export function CoachPanel({ user, addToast, globalSearch = '', muscleFilter = '
     const errs = validateForm();
     if (Object.keys(errs).length) { setFormErrors(errs); return; }
     const exercises = form.exercises.filter(e => e.trim());
+
+    // Profanity check
+    const profanityResult = checkRoutineProfanity(form.title, form.description, exercises);
+    if (profanityResult.hasProfanity) {
+      setFormErrors({ profanity: profanityResult.message });
+      addToast('🚫 No se permite lenguaje ofensivo en las rutinas.', 'error');
+      return;
+    }
     if (editingId) {
       updateRoutine(editingId, { title: form.title, description: form.description, level: form.level, gender: form.gender, exercises });
       addToast('✏️ ¡Rutina actualizada!', 'success');
