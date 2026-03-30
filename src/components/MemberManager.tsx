@@ -20,6 +20,9 @@ export function MemberManager({ addToast }: MemberManagerProps) {
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState<'todos' | 'hombre' | 'mujer'>('todos');
   const [levelFilter, setLevelFilter] = useState<'Todos' | 'Principiante' | 'Intermedio' | 'Pro'>('Todos');
+  const [blockReason, setBlockReason] = useState('');
+  const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
+  const [blockedList, setBlockedList] = useState<BlockRecord[]>(getBlockedUsers);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortAsc, setSortAsc] = useState(true);
   const [showForm, setShowForm] = useState(false);
