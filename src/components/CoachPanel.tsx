@@ -349,6 +349,24 @@ export function CoachPanel({ user, addToast, globalSearch = '', muscleFilter = '
                   </button>
                 </div>
 
+                {formErrors.profanity && (
+                  <div style={{
+                    background: 'hsl(var(--destructive) / 0.1)',
+                    border: '1px solid hsl(var(--destructive) / 0.3)',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '1.2rem' }}>🚫</span>
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.82rem', fontWeight: '600' }}>
+                      {formErrors.profanity}
+                    </p>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <button className="btn-neon" type="submit">
                     {editingId ? 'GUARDAR CAMBIOS' : 'PUBLICAR RUTINA'}
