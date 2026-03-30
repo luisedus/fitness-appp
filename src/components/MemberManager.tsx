@@ -92,6 +92,21 @@ export function MemberManager({ addToast }: MemberManagerProps) {
     addToast('🗑️ Socio eliminado.', 'info');
   };
 
+  const handleBlock = (userId: string) => {
+    if (!blockReason.trim()) { addToast('Debes indicar una razón para bloquear.', 'error'); return; }
+    blockUser(userId, 'admin', blockReason.trim());
+    setBlockedList(getBlockedUsers());
+    setBlockingUserId(null);
+    setBlockReason('');
+    addToast('🚫 Usuario bloqueado exitosamente.', 'info');
+  };
+
+  const handleUnblock = (userId: string) => {
+    unblockUser(userId);
+    setBlockedList(getBlockedUsers());
+    addToast('✅ Usuario desbloqueado.', 'success');
+  };
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortAsc(a => !a);
     else { setSortField(field); setSortAsc(true); }
