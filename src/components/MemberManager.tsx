@@ -4,6 +4,11 @@ import { type Member, getMembers, addMember, updateMember, deleteMember } from '
 import { blockUser, unblockUser, isUserBlocked, getBlockedUsers, type BlockRecord } from '../lib/blocking';
 import { getUsers, type AuthUser } from '../lib/auth';
 
+// Helper to get registered users (non-coach) for blocking
+function getRegisteredMembers(): { id: string; name: string; email: string }[] {
+  return getUsers().filter(u => u.role === 'member');
+}
+
 interface MemberManagerProps {
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
