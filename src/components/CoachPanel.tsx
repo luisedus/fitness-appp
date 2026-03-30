@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type Routine, getRoutines, addRoutine, deleteRoutine, updateRoutine } from '../lib/data';
 import { type AuthUser } from '../lib/auth';
+import { checkRoutineProfanity } from '../lib/profanity';
 
 interface CoachPanelProps {
   user: AuthUser;
