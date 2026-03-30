@@ -184,6 +184,12 @@ export function loginUser(email: string, password: string): { success: boolean; 
   if (!user) return { success: false, message: 'Usuario no encontrado.' };
   if (passwords[email] !== password) return { success: false, message: 'Contraseña incorrecta.' };
 
+  // Check if blocked
+  const { isUserBlocked } = await import('./blocking');
+  if (isUserBlocked(user.id)) {
+    return { success: false, message: '🚫 Tu cuenta ha sido bloqueada. Contacta al administrador.' };
+  }
+
   if (user.mfaEnabled) {
     const code = generateOtp();
     localStorage.setItem(MFA_PENDING_KEY, JSON.stringify({ userId: user.id, code }));
