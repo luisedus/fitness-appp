@@ -300,7 +300,7 @@ export function MemberManager({ addToast }: MemberManagerProps) {
                       {m.joinDate}
                     </td>
                     <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button className="btn-edit" onClick={() => handleEdit(m)}>Editar</button>
                         <button className="btn-danger" onClick={() => setConfirmDeleteId(m.id)}>Eliminar</button>
                       </div>
