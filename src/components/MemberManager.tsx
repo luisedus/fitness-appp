@@ -331,7 +331,103 @@ export function MemberManager({ addToast }: MemberManagerProps) {
         </table>
       </div>
 
-      {/* Confirm Delete Modal */}
+      {/* Blocked Users Section */}
+      <div style={{ marginTop: '2rem' }}>
+        <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: 'hsl(var(--foreground))', marginBottom: '1rem' }}>
+          🚫 USUARIOS <span style={{ color: 'hsl(var(--destructive))' }}>BLOQUEADOS</span>
+        </h3>
+
+        {/* Block a registered user */}
+        <div className="glass-card" style={{ borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1rem', border: '1px solid hsl(var(--border))' }}>
+          <p style={{ fontSize: '0.8rem', color: 'hsl(var(--smoke))', marginBottom: '0.75rem' }}>
+            Selecciona un usuario registrado para bloquearlo. Los usuarios bloqueados no podrán iniciar sesión.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ flex: 1, minWidth: '180px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Usuario</label>
+              <select
+                className="input-dark"
+                value={blockingUserId || ''}
+                onChange={e => setBlockingUserId(e.target.value || null)}
+              >
+                <option value="">Seleccionar usuario...</option>
+                {getRegisteredMembers()
+                  .filter(u => !blockedList.some(b => b.userId === u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                  ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: '180px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Razón</label>
+              <input
+                className="input-dark"
+                type="text"
+                placeholder="Motivo del bloqueo..."
+                value={blockReason}
+                onChange={e => setBlockReason(e.target.value)}
+              />
+            </div>
+            <button
+              className="btn-danger"
+              style={{ padding: '0.55rem 1.25rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+              disabled={!blockingUserId}
+              onClick={() => blockingUserId && handleBlock(blockingUserId)}
+            >
+              🚫 Bloquear
+            </button>
+          </div>
+        </div>
+
+        {/* Blocked list */}
+        {blockedList.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>
+            ✅ No hay usuarios bloqueados actualmente.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '0.5rem' }}>
+            {blockedList.map(b => {
+              const user = getRegisteredMembers().find(u => u.id === b.userId);
+              return (
+                <div
+                  key={b.userId}
+                  className="glass-card"
+                  style={{
+                    borderRadius: '0.5rem',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    border: '1px solid hsl(var(--destructive) / 0.3)',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: '600', color: 'hsl(var(--foreground))', fontSize: '0.9rem' }}>
+                      🚫 {user?.name || 'Usuario desconocido'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--smoke))' }}>
+                      {user?.email || b.userId} · Bloqueado: {b.blockedAt}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--destructive))', marginTop: '0.15rem' }}>
+                      Razón: {b.reason}
+                    </div>
+                  </div>
+                  <button
+                    className="btn-edit"
+                    style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                    onClick={() => handleUnblock(b.userId)}
+                  >
+                    ✅ Desbloquear
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <AnimatePresence>
         {confirmDeleteId && (
           <motion.div
