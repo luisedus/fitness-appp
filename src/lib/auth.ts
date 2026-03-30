@@ -1,3 +1,5 @@
+import { isUserBlocked } from './blocking';
+
 export type UserRole = 'coach' | 'member';
 
 export interface AuthUser {
