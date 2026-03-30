@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type Routine, getRoutines, addRoutine, deleteRoutine, updateRoutine } from '../lib/data';
 import { type AuthUser } from '../lib/auth';
+import { checkRoutineProfanity } from '../lib/profanity';
 
 interface CoachPanelProps {
   user: AuthUser;
@@ -94,6 +95,14 @@ export function CoachPanel({ user, addToast, globalSearch = '', muscleFilter = '
     const errs = validateForm();
     if (Object.keys(errs).length) { setFormErrors(errs); return; }
     const exercises = form.exercises.filter(e => e.trim());
+
+    // Profanity check
+    const profanityResult = checkRoutineProfanity(form.title, form.description, exercises);
+    if (profanityResult.hasProfanity) {
+      setFormErrors({ profanity: profanityResult.message });
+      addToast('🚫 No se permite lenguaje ofensivo en las rutinas.', 'error');
+      return;
+    }
     if (editingId) {
       updateRoutine(editingId, { title: form.title, description: form.description, level: form.level, gender: form.gender, exercises });
       addToast('✏️ ¡Rutina actualizada!', 'success');
@@ -339,6 +348,24 @@ export function CoachPanel({ user, addToast, globalSearch = '', muscleFilter = '
                     + Agregar ejercicio
                   </button>
                 </div>
+
+                {formErrors.profanity && (
+                  <div style={{
+                    background: 'hsl(var(--destructive) / 0.1)',
+                    border: '1px solid hsl(var(--destructive) / 0.3)',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '1.2rem' }}>🚫</span>
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.82rem', fontWeight: '600' }}>
+                      {formErrors.profanity}
+                    </p>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <button className="btn-neon" type="submit">

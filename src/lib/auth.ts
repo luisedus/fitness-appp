@@ -1,3 +1,5 @@
+import { isUserBlocked } from './blocking';
+
 export type UserRole = 'coach' | 'member';
 
 export interface AuthUser {
@@ -42,7 +44,7 @@ function simpleHash(str: string): string {
   return Math.abs(hash).toString(36);
 }
 
-function getUsers(): AuthUser[] {
+export function getUsers(): AuthUser[] {
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch { return []; }
 }
 
@@ -183,6 +185,11 @@ export function loginUser(email: string, password: string): { success: boolean; 
   const user = users.find(u => u.email === email);
   if (!user) return { success: false, message: 'Usuario no encontrado.' };
   if (passwords[email] !== password) return { success: false, message: 'Contraseña incorrecta.' };
+
+  // Check if blocked
+  if (isUserBlocked(user.id)) {
+    return { success: false, message: '🚫 Tu cuenta ha sido bloqueada. Contacta al administrador.' };
+  }
 
   if (user.mfaEnabled) {
     const code = generateOtp();
