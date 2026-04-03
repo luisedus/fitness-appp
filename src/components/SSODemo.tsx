@@ -62,7 +62,7 @@ export function SSODemo({ user, addToast, onClose }: SSODemoProps) {
   const [accessGranted, setAccessGranted] = useState<string[]>(['app-a']);
 
   const handleGenerateToken = () => {
-    const token = generateSSOToken(user.id);
+    const token = generateSSOToken(user.id, user);
     if (token) {
       setSsoToken(token);
       addToast('🔗 Token SSO generado (válido 30 min)', 'success');
