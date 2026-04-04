@@ -1,38 +1,28 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type Member, getMembers, addMember, updateMember, deleteMember } from '../lib/data';
-import { supabase } from '@/integrations/supabase/client';
+import { blockUser, unblockUser, isUserBlocked, getBlockedUsers, type BlockRecord } from '../lib/blocking';
+import { getUsers, type AuthUser } from '../lib/auth';
+
+// Helper to get registered users (non-coach) for blocking
+function getRegisteredMembers(): { id: string; name: string; email: string }[] {
+  return getUsers().filter(u => u.role === 'member');
+}
 
 interface MemberManagerProps {
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
-  currentUserId: string;
 }
 
 type SortField = 'name' | 'level' | 'joinDate';
 
-interface BlockedUser {
-  id: string;
-  user_id: string;
-  reason: string;
-  blocked_at: string;
-}
-
-interface ProfileUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
-export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
+export function MemberManager({ addToast }: MemberManagerProps) {
   const [members, setMembers] = useState<Member[]>(getMembers);
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState<'todos' | 'hombre' | 'mujer'>('todos');
   const [levelFilter, setLevelFilter] = useState<'Todos' | 'Principiante' | 'Intermedio' | 'Pro'>('Todos');
   const [blockReason, setBlockReason] = useState('');
   const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
-  const [blockedList, setBlockedList] = useState<BlockedUser[]>([]);
-  const [registeredMembers, setRegisteredMembers] = useState<ProfileUser[]>([]);
+  const [blockedList, setBlockedList] = useState<BlockRecord[]>(getBlockedUsers);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortAsc, setSortAsc] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -44,22 +34,6 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
   const [form, setForm] = useState(emptyForm);
 
   const refresh = () => setMembers(getMembers());
-
-  // Load blocked users and registered members from DB
-  useEffect(() => {
-    loadBlockedUsers();
-    loadRegisteredMembers();
-  }, []);
-
-  const loadBlockedUsers = async () => {
-    const { data } = await supabase.from('blocked_users').select('*');
-    if (data) setBlockedList(data as BlockedUser[]);
-  };
-
-  const loadRegisteredMembers = async () => {
-    const { data } = await supabase.from('profiles').select('id, name, email, role').eq('role', 'member');
-    if (data) setRegisteredMembers(data);
-  };
 
   const filtered = useMemo(() => {
     let list = [...members];
@@ -118,30 +92,18 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
     addToast('🗑️ Socio eliminado.', 'info');
   };
 
-  const handleBlock = async (userId: string) => {
+  const handleBlock = (userId: string) => {
     if (!blockReason.trim()) { addToast('Debes indicar una razón para bloquear.', 'error'); return; }
-    const { error } = await supabase.from('blocked_users').insert({
-      user_id: userId,
-      blocked_by: currentUserId,
-      reason: blockReason.trim(),
-    });
-    if (error) {
-      addToast('Error al bloquear usuario: ' + error.message, 'error');
-      return;
-    }
-    await loadBlockedUsers();
+    blockUser(userId, 'admin', blockReason.trim());
+    setBlockedList(getBlockedUsers());
     setBlockingUserId(null);
     setBlockReason('');
     addToast('🚫 Usuario bloqueado exitosamente.', 'info');
   };
 
-  const handleUnblock = async (userId: string) => {
-    const { error } = await supabase.from('blocked_users').delete().eq('user_id', userId);
-    if (error) {
-      addToast('Error al desbloquear: ' + error.message, 'error');
-      return;
-    }
-    await loadBlockedUsers();
+  const handleUnblock = (userId: string) => {
+    unblockUser(userId);
+    setBlockedList(getBlockedUsers());
     addToast('✅ Usuario desbloqueado.', 'success');
   };
 
@@ -154,7 +116,7 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
     level === 'Pro' ? 'badge-level badge-pro' : level === 'Intermedio' ? 'badge-level badge-intermediate' : 'badge-level badge-beginner';
 
   const SortIcon = ({ field }: { field: SortField }) =>
-    sortField === field ? (sortAsc ? <> ↑</> : <> ↓</>) : <> ↕</>;
+    sortField === field ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
 
   return (
     <div className="animate-fade-in">
@@ -166,10 +128,12 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
           </h2>
           <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>
             {filtered.length} socio{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
-            <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'hsl(var(--neon))' }}>🔒 Solo Admin</span>
           </p>
         </div>
-        <button className="btn-neon" onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm); setFormErrors({}); }}>
+        <button
+          className="btn-neon"
+          onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm); setFormErrors({}); }}
+        >
           {showForm ? '✕ CANCELAR' : '+ NUEVO SOCIO'}
         </button>
       </div>
@@ -177,8 +141,13 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
       {/* Form */}
       <AnimatePresence>
         {showForm && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }}
-            style={{ overflow: 'hidden', marginBottom: '1.5rem' }}>
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{ overflow: 'hidden', marginBottom: '1.5rem' }}
+          >
             <div className="glass-card" style={{ borderRadius: '0.75rem', padding: '1.5rem', border: '1px solid hsl(var(--neon) / 0.2)' }}>
               <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', color: 'hsl(var(--neon))', marginBottom: '1.25rem' }}>
                 {editingId ? 'EDITAR SOCIO' : 'REGISTRAR NUEVO SOCIO'}
@@ -191,30 +160,47 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
                     { label: 'Edad *', key: 'age', type: 'number', placeholder: 'Ej: 25' },
                   ].map(({ label, key, type, placeholder }) => (
                     <div key={key}>
-                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.35rem', textTransform: 'uppercase' }}>{label}</label>
-                      <input className="input-dark" type={type} placeholder={placeholder}
+                      <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                        {label}
+                      </label>
+                      <input
+                        className="input-dark"
+                        type={type}
+                        placeholder={placeholder}
                         value={form[key as keyof typeof form] as string}
                         onChange={e => { setForm(p => ({ ...p, [key]: e.target.value })); setFormErrors(p => ({ ...p, [key]: '' })); }}
-                        style={{ borderColor: formErrors[key] ? 'hsl(var(--destructive))' : undefined }} />
+                        style={{ borderColor: formErrors[key] ? 'hsl(var(--destructive))' : undefined }}
+                      />
                       {formErrors[key] && <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.72rem', marginTop: '0.2rem' }}>{formErrors[key]}</p>}
                     </div>
                   ))}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.35rem', textTransform: 'uppercase' }}>Género</label>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                      Género
+                    </label>
                     <select className="input-dark" value={form.gender} onChange={e => setForm(p => ({ ...p, gender: e.target.value as 'hombre' | 'mujer' }))}>
-                      <option value="hombre">Hombre</option><option value="mujer">Mujer</option>
+                      <option value="hombre">Hombre</option>
+                      <option value="mujer">Mujer</option>
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.35rem', textTransform: 'uppercase' }}>Nivel</label>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                      Nivel
+                    </label>
                     <select className="input-dark" value={form.level} onChange={e => setForm(p => ({ ...p, level: e.target.value as Member['level'] }))}>
-                      <option>Principiante</option><option>Intermedio</option><option>Pro</option>
+                      <option>Principiante</option>
+                      <option>Intermedio</option>
+                      <option>Pro</option>
                     </select>
                   </div>
                 </div>
                 <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.75rem' }}>
-                  <button className="btn-neon" type="submit">{editingId ? 'GUARDAR CAMBIOS' : 'REGISTRAR SOCIO'}</button>
-                  <button type="button" className="btn-ghost" onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); setFormErrors({}); }}>Cancelar</button>
+                  <button className="btn-neon" type="submit">
+                    {editingId ? 'GUARDAR CAMBIOS' : 'REGISTRAR SOCIO'}
+                  </button>
+                  <button type="button" className="btn-ghost" onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); setFormErrors({}); }}>
+                    Cancelar
+                  </button>
                 </div>
               </form>
             </div>
@@ -226,20 +212,36 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
           <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'hsl(var(--smoke))', fontSize: '0.9rem' }}>🔍</span>
-          <input className="input-dark" type="text" placeholder="Buscar socio por nombre o email..." value={search}
-            onChange={e => setSearch(e.target.value)} style={{ paddingLeft: '2.4rem' }} />
+          <input
+            className="input-dark"
+            type="text"
+            placeholder="Buscar socio por nombre o email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ paddingLeft: '2.4rem' }}
+          />
         </div>
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           {(['todos', 'hombre', 'mujer'] as const).map(g => (
-            <button key={g} className={`filter-chip ${genderFilter === g ? 'active' : 'inactive'}`} onClick={() => setGenderFilter(g)}>
+            <button
+              key={g}
+              className={`filter-chip ${genderFilter === g ? 'active' : 'inactive'}`}
+              onClick={() => setGenderFilter(g)}
+            >
               {g === 'todos' ? 'Todos' : g === 'hombre' ? '♂ Hombre' : '♀ Mujer'}
             </button>
           ))}
         </div>
-        <select className="input-dark" style={{ width: 'auto', minWidth: '150px' }} value={levelFilter}
-          onChange={e => setLevelFilter(e.target.value as typeof levelFilter)}>
+        <select
+          className="input-dark"
+          style={{ width: 'auto', minWidth: '150px' }}
+          value={levelFilter}
+          onChange={e => setLevelFilter(e.target.value as typeof levelFilter)}
+        >
           <option value="Todos">Todos los niveles</option>
-          <option>Principiante</option><option>Intermedio</option><option>Pro</option>
+          <option>Principiante</option>
+          <option>Intermedio</option>
+          <option>Pro</option>
         </select>
       </div>
 
@@ -257,8 +259,21 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
                 { label: 'Alta', field: 'joinDate' as SortField },
                 { label: 'Acciones', field: null },
               ].map(({ label, field }) => (
-                <th key={label} onClick={() => field && toggleSort(field)}
-                  style={{ padding: '0.9rem 1rem', textAlign: 'left', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                <th
+                  key={label}
+                  onClick={() => field && toggleSort(field)}
+                  style={{
+                    padding: '0.9rem 1rem',
+                    textAlign: 'left',
+                    fontSize: '0.7rem',
+                    color: 'hsl(var(--smoke))',
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    cursor: field ? 'pointer' : 'default',
+                    userSelect: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {label}{field && <SortIcon field={field} />}
                 </th>
               ))}
@@ -275,14 +290,33 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
                 </tr>
               ) : (
                 filtered.map((m, i) => (
-                  <motion.tr key={m.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}
-                    transition={{ delay: i * 0.03 }} className="table-row-hover" style={{ borderBottom: '1px solid hsl(var(--border) / 0.5)' }}>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: '600', color: 'hsl(var(--foreground))' }}>{m.name}</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>{m.email}</td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>{m.age} años</td>
-                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'hsl(var(--smoke))' }}>{m.gender === 'hombre' ? '♂ Hombre' : '♀ Mujer'}</td>
-                    <td style={{ padding: '0.85rem 1rem' }}><span className={levelBadgeClass(m.level)}>{m.level}</span></td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'hsl(var(--smoke))', fontSize: '0.82rem' }}>{m.joinDate}</td>
+                  <motion.tr
+                    key={m.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="table-row-hover"
+                    style={{ borderBottom: '1px solid hsl(var(--border) / 0.5)' }}
+                  >
+                    <td style={{ padding: '0.85rem 1rem', fontWeight: '600', color: 'hsl(var(--foreground))' }}>
+                      {m.name}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>
+                      {m.email}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>
+                      {m.age} años
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', color: 'hsl(var(--smoke))' }}>
+                      {m.gender === 'hombre' ? '♂ Hombre' : '♀ Mujer'}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      <span className={levelBadgeClass(m.level)}>{m.level}</span>
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', color: 'hsl(var(--smoke))', fontSize: '0.82rem' }}>
+                      {m.joinDate}
+                    </td>
                     <td style={{ padding: '0.85rem 1rem' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button className="btn-edit" onClick={() => handleEdit(m)}>Editar</button>
@@ -301,9 +335,9 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
       <div style={{ marginTop: '2rem' }}>
         <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: 'hsl(var(--foreground))', marginBottom: '1rem' }}>
           🚫 USUARIOS <span style={{ color: 'hsl(var(--destructive))' }}>BLOQUEADOS</span>
-          <span style={{ fontSize: '0.7rem', marginLeft: '0.5rem', color: 'hsl(var(--neon))' }}>🔒 Solo Admin</span>
         </h3>
 
+        {/* Block a registered user */}
         <div className="glass-card" style={{ borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1rem', border: '1px solid hsl(var(--border))' }}>
           <p style={{ fontSize: '0.8rem', color: 'hsl(var(--smoke))', marginBottom: '0.75rem' }}>
             Selecciona un usuario registrado para bloquearlo. Los usuarios bloqueados no podrán iniciar sesión.
@@ -311,10 +345,14 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: 1, minWidth: '180px' }}>
               <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Usuario</label>
-              <select className="input-dark" value={blockingUserId || ''} onChange={e => setBlockingUserId(e.target.value || null)}>
+              <select
+                className="input-dark"
+                value={blockingUserId || ''}
+                onChange={e => setBlockingUserId(e.target.value || null)}
+              >
                 <option value="">Seleccionar usuario...</option>
-                {registeredMembers
-                  .filter(u => !blockedList.some(b => b.user_id === u.id))
+                {getRegisteredMembers()
+                  .filter(u => !blockedList.some(b => b.userId === u.id))
                   .map(u => (
                     <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                   ))}
@@ -322,42 +360,67 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
             </div>
             <div style={{ flex: 1, minWidth: '180px' }}>
               <label style={{ display: 'block', fontSize: '0.7rem', color: 'hsl(var(--smoke))', letterSpacing: '0.1em', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Razón</label>
-              <input className="input-dark" type="text" placeholder="Motivo del bloqueo..." value={blockReason} onChange={e => setBlockReason(e.target.value)} />
+              <input
+                className="input-dark"
+                type="text"
+                placeholder="Motivo del bloqueo..."
+                value={blockReason}
+                onChange={e => setBlockReason(e.target.value)}
+              />
             </div>
-            <button className="btn-danger" style={{ padding: '0.55rem 1.25rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-              onClick={() => blockingUserId && handleBlock(blockingUserId)} disabled={!blockingUserId}>
+            <button
+              className="btn-danger"
+              style={{ padding: '0.55rem 1.25rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+              disabled={!blockingUserId}
+              onClick={() => blockingUserId && handleBlock(blockingUserId)}
+            >
               🚫 Bloquear
             </button>
           </div>
         </div>
 
-        {/* Blocked users list */}
+        {/* Blocked list */}
         {blockedList.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '1.5rem', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>
-            ✅ No hay usuarios bloqueados
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'hsl(var(--smoke))', fontSize: '0.85rem' }}>
+            ✅ No hay usuarios bloqueados actualmente.
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '0.5rem' }}>
             {blockedList.map(b => {
-              const memberProfile = registeredMembers.find(u => u.id === b.user_id);
+              const user = getRegisteredMembers().find(u => u.id === b.userId);
               return (
-                <div key={b.id} className="glass-card" style={{
-                  padding: '0.75rem 1rem', borderRadius: '0.5rem',
-                  border: '1px solid hsl(var(--destructive) / 0.3)', display: 'flex',
-                  justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem',
-                }}>
+                <div
+                  key={b.userId}
+                  className="glass-card"
+                  style={{
+                    borderRadius: '0.5rem',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    border: '1px solid hsl(var(--destructive) / 0.3)',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <div>
-                    <span style={{ fontWeight: '600', color: 'hsl(var(--foreground))', fontSize: '0.85rem' }}>
-                      {memberProfile?.name || b.user_id}
-                    </span>
-                    <span style={{ color: 'hsl(var(--smoke))', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
-                      ({memberProfile?.email || 'Email desconocido'})
-                    </span>
-                    <div style={{ fontSize: '0.72rem', color: 'hsl(var(--smoke))' }}>
-                      Razón: {b.reason} · Bloqueado: {new Date(b.blocked_at).toLocaleDateString('es-ES')}
+                    <div style={{ fontWeight: '600', color: 'hsl(var(--foreground))', fontSize: '0.9rem' }}>
+                      🚫 {user?.name || 'Usuario desconocido'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--smoke))' }}>
+                      {user?.email || b.userId} · Bloqueado: {b.blockedAt}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--destructive))', marginTop: '0.15rem' }}>
+                      Razón: {b.reason}
                     </div>
                   </div>
-                  <button className="btn-edit" onClick={() => handleUnblock(b.user_id)} style={{ fontSize: '0.72rem' }}>Desbloquear</button>
+                  <button
+                    className="btn-edit"
+                    style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                    onClick={() => handleUnblock(b.userId)}
+                  >
+                    ✅ Desbloquear
+                  </button>
                 </div>
               );
             })}
@@ -365,19 +428,40 @@ export function MemberManager({ addToast, currentUserId }: MemberManagerProps) {
         )}
       </div>
 
-      {/* Delete confirmation modal */}
       <AnimatePresence>
         {confirmDeleteId && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="glass-card"
-              style={{ padding: '2rem', borderRadius: '1rem', maxWidth: '380px', width: '90%', textAlign: 'center' }}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+            }}
+            onClick={() => setConfirmDeleteId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-card"
+              style={{ padding: '2rem', borderRadius: '1rem', maxWidth: '360px', width: '90%', textAlign: 'center' }}
+              onClick={e => e.stopPropagation()}
+            >
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
-              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', marginBottom: '0.75rem' }}>¿ELIMINAR SOCIO?</h3>
-              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Esta acción no se puede deshacer.</p>
+              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', marginBottom: '0.5rem' }}>
+                ¿ELIMINAR SOCIO?
+              </h3>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                Esta acción no se puede deshacer. El socio será eliminado permanentemente.
+              </p>
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                <button className="btn-danger" onClick={() => handleDelete(confirmDeleteId)}>Sí, eliminar</button>
-                <button className="btn-ghost" onClick={() => setConfirmDeleteId(null)}>Cancelar</button>
+                <button className="btn-danger" style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem' }} onClick={() => handleDelete(confirmDeleteId)}>
+                  Sí, eliminar
+                </button>
+                <button className="btn-ghost" onClick={() => setConfirmDeleteId(null)}>
+                  Cancelar
+                </button>
               </div>
             </motion.div>
           </motion.div>

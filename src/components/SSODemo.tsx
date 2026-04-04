@@ -1,47 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { type AppUser as AuthUser } from '../lib/supabase-auth';
-
-// SSO Token simulation (kept in localStorage for demo purposes)
-interface SSOToken {
-  userId: string;
-  email: string;
-  name: string;
-  role: string;
-  token: string;
-  issuedAt: number;
-  expiresAt: number;
-  domain: string;
-}
-
-const SSO_TOKEN_KEY = 'gymbros_sso_token';
-
-function generateSSOToken(userId: string, user: AuthUser): SSOToken {
-  const token: SSOToken = {
-    userId, email: user.email, name: user.name, role: user.role,
-    token: `sso-${Date.now()}-${Math.random().toString(36).substr(2, 16)}`,
-    issuedAt: Date.now(), expiresAt: Date.now() + 30 * 60 * 1000, domain: 'gymbros.app',
-  };
-  localStorage.setItem(SSO_TOKEN_KEY, JSON.stringify(token));
-  return token;
-}
-
-function getActiveSSOToken(): SSOToken | null {
-  try {
-    const stored = JSON.parse(localStorage.getItem(SSO_TOKEN_KEY) || 'null') as SSOToken | null;
-    if (stored && Date.now() < stored.expiresAt) return stored;
-    return null;
-  } catch { return null; }
-}
-
-function validateSSOToken(tokenStr: string): { success: boolean; message: string } {
-  try {
-    const stored = JSON.parse(localStorage.getItem(SSO_TOKEN_KEY) || 'null') as SSOToken | null;
-    if (!stored || stored.token !== tokenStr) return { success: false, message: 'Token SSO inválido.' };
-    if (Date.now() > stored.expiresAt) return { success: false, message: 'Token SSO expirado.' };
-    return { success: true, message: '¡Acceso SSO concedido!' };
-  } catch { return { success: false, message: 'Error al validar token SSO.' }; }
-}
+import { type AuthUser, generateSSOToken, validateSSOToken, getActiveSSOToken, type SSOToken } from '../lib/auth';
 
 interface SSODemoProps {
   user: AuthUser;
@@ -62,7 +21,7 @@ export function SSODemo({ user, addToast, onClose }: SSODemoProps) {
   const [accessGranted, setAccessGranted] = useState<string[]>(['app-a']);
 
   const handleGenerateToken = () => {
-    const token = generateSSOToken(user.id, user);
+    const token = generateSSOToken(user.id);
     if (token) {
       setSsoToken(token);
       addToast('🔗 Token SSO generado (válido 30 min)', 'success');
