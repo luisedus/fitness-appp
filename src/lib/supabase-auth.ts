@@ -105,12 +105,15 @@ export async function signIn(email: string, password: string): Promise<{
 
   // Check if blocked
   const { data: blockData } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', data.user.id)
-    .single();
+    .from('blocked_users')
+    .select('id, reason')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
 
-  // We'll check blocking from the blocked_users table once we create it
+  if (blockData) {
+    await supabase.auth.signOut();
+    return { success: false, message: `🚫 Tu cuenta ha sido bloqueada. Motivo: ${blockData.reason || 'No especificado'}` };
+  }
 
   return { success: true, user: appUser, message: `¡Bienvenido, ${appUser.name}! 💪` };
 }
@@ -263,13 +266,13 @@ async function getAppUser(user: User): Promise<AppUser | null> {
 }
 
 // ─── Auth State Listener ────────────────────
-export function onAuthStateChange(callback: (user: AppUser | null) => void) {
+export function onAuthStateChange(callback: (user: AppUser | null, event?: string) => void) {
   return supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session?.user) {
       const appUser = await getAppUser(session.user);
-      callback(appUser);
+      callback(appUser, event);
     } else if (event === 'SIGNED_OUT') {
-      callback(null);
+      callback(null, event);
     }
   });
 }

@@ -5,12 +5,13 @@ import { RobotVerify } from './RobotVerify';
 
 interface LoginScreenProps {
   onLogin: () => void;
+  onMfaPending?: () => void;
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'email-sent' | 'mfa-verify' | 'recovery';
 
-export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
   const [isVerified, setIsVerified] = useState(false);
   const [isVerifiedReg, setIsVerifiedReg] = useState(false);
@@ -77,6 +78,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
 
     if (result.success) {
       if (result.mfaRequired) {
+        onMfaPending?.();
         setMode('mfa-verify');
       } else {
         addToast(result.message, 'success');

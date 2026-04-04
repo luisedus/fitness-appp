@@ -8,11 +8,14 @@ import { ToastContainer, useToasts } from '../components/ToastSystem';
 const Index = () => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mfaPending, setMfaPending] = useState(false);
   const { toasts, addToast, removeToast } = useToasts();
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = onAuthStateChange(async (appUser) => {
+    const { data: { subscription } } = onAuthStateChange(async (appUser, event) => {
+      // Don't auto-set user on SIGNED_IN if MFA is pending
+      if (event === 'SIGNED_IN' && mfaPending) return;
       setUser(appUser);
       setLoading(false);
     });
@@ -26,15 +29,21 @@ const Index = () => {
     checkSession();
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [mfaPending]);
 
   const handleLogin = async () => {
+    setMfaPending(false);
     const appUser = await getCurrentUser();
     setUser(appUser);
   };
 
+  const handleMfaPending = () => {
+    setMfaPending(true);
+  };
+
   const handleLogout = () => {
     setUser(null);
+    setMfaPending(false);
   };
 
   if (loading) {
@@ -58,10 +67,10 @@ const Index = () => {
 
   return (
     <>
-      {user ? (
+      {user && !mfaPending ? (
         <Dashboard user={user} onLogout={handleLogout} addToast={addToast} />
       ) : (
-        <LoginScreen onLogin={handleLogin} addToast={addToast} />
+        <LoginScreen onLogin={handleLogin} onMfaPending={handleMfaPending} addToast={addToast} />
       )}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
