@@ -11,7 +11,7 @@ interface LoginScreenProps {
 
 type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'email-sent' | 'mfa-verify' | 'recovery';
 
-export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
   const [isVerified, setIsVerified] = useState(false);
   const [isVerifiedReg, setIsVerifiedReg] = useState(false);
