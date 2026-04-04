@@ -395,9 +395,9 @@ export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProp
                 setLoading(true);
                 const result = await verifyEmailOtp(confirmEmail, otpCode);
                 if (result.success) {
-                  addToast(result.message, 'success');
-                  setMode('login');
+                  addToast('✅ ¡Email verificado! Bienvenido 💪', 'success');
                   setOtpCode('');
+                  onLogin();
                 } else {
                   addToast(result.message, 'error');
                   setErrors({ otp: result.message });
