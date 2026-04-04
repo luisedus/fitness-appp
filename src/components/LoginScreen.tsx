@@ -78,6 +78,7 @@ export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProp
 
     if (result.success) {
       if (result.mfaRequired) {
+        onMfaPending?.();
         setMode('mfa-verify');
       } else {
         addToast(result.message, 'success');
