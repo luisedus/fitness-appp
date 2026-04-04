@@ -105,12 +105,15 @@ export async function signIn(email: string, password: string): Promise<{
 
   // Check if blocked
   const { data: blockData } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', data.user.id)
-    .single();
+    .from('blocked_users')
+    .select('id, reason')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
 
-  // We'll check blocking from the blocked_users table once we create it
+  if (blockData) {
+    await supabase.auth.signOut();
+    return { success: false, message: `🚫 Tu cuenta ha sido bloqueada. Motivo: ${blockData.reason || 'No especificado'}` };
+  }
 
   return { success: true, user: appUser, message: `¡Bienvenido, ${appUser.name}! 💪` };
 }
