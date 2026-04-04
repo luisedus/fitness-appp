@@ -61,11 +61,50 @@ export async function signUp(data: {
     return {
       success: true,
       needsConfirmation: true,
-      message: '📧 Se ha enviado un enlace de verificación a tu correo electrónico. Revisa tu bandeja de entrada (y spam) para confirmar tu cuenta.',
+      message: '📧 Se ha enviado un código de verificación a tu correo electrónico. Revisa tu bandeja de entrada (y spam).',
     };
   }
 
   return { success: true, message: '¡Cuenta creada exitosamente!' };
+}
+
+// ─── Verify Email OTP ───────────────────────
+export async function verifyEmailOtp(email: string, token: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const { error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'signup',
+  });
+
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('expired') || msg.includes('invalid')) {
+      return { success: false, message: 'Código inválido o expirado. Solicita uno nuevo.' };
+    }
+    return { success: false, message: mapAuthError(error) };
+  }
+
+  return { success: true, message: '✅ ¡Email verificado exitosamente! Ya puedes iniciar sesión.' };
+}
+
+// ─── Resend Verification Code ───────────────
+export async function resendVerificationCode(email: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  });
+
+  if (error) {
+    return { success: false, message: mapAuthError(error) };
+  }
+
+  return { success: true, message: '📧 Se ha reenviado el código de verificación a tu correo.' };
 }
 
 // ─── Sign In ────────────────────────────────

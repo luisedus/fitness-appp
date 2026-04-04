@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signIn, signUp, verifyMfaLogin, requestPasswordReset, type UserRole } from '../lib/supabase-auth';
+import { signIn, signUp, verifyMfaLogin, requestPasswordReset, verifyEmailOtp, resendVerificationCode, type UserRole } from '../lib/supabase-auth';
 import { RobotVerify } from './RobotVerify';
 
 interface LoginScreenProps {
@@ -19,6 +19,8 @@ export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProp
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [mfaCode, setMfaCode] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Recovery
   const [recoveryEmail, setRecoveryEmail] = useState('');
@@ -372,7 +374,7 @@ export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProp
             </motion.div>
           )}
 
-          {/* EMAIL SENT CONFIRMATION */}
+          {/* EMAIL OTP VERIFICATION */}
           {mode === 'email-sent' && (
             <motion.div key="email-sent" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -24 }} transition={{ duration: 0.3 }}
               className="glass-card" style={{ width: '100%', maxWidth: '440px', borderRadius: '1rem', padding: '2.5rem 2rem', textAlign: 'center' }}>
@@ -381,30 +383,74 @@ export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProp
                 <span style={{ color: 'hsl(var(--foreground))' }}>VERIFICA TU </span>
                 <span style={{ color: 'hsl(var(--neon))' }}>EMAIL</span>
               </h2>
-              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.9rem', marginBottom: '1rem', lineHeight: '1.5' }}>
-                Hemos enviado un enlace de verificación a:
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.9rem', marginBottom: '0.5rem', lineHeight: '1.5' }}>
+                Hemos enviado un código de verificación de 6 dígitos a:
               </p>
               <p style={{ color: 'hsl(var(--neon))', fontWeight: '700', fontSize: '1.1rem', marginBottom: '1.5rem' }}>
                 {confirmEmail}
               </p>
-              <div style={{
-                padding: '1rem', borderRadius: '0.75rem', background: 'hsl(var(--neon) / 0.05)',
-                border: '1px solid hsl(var(--neon) / 0.2)', marginBottom: '1.5rem', textAlign: 'left'
-              }}>
-                <p style={{ fontSize: '0.8rem', color: 'hsl(var(--smoke))', marginBottom: '0.5rem' }}>📌 <strong>Pasos a seguir:</strong></p>
-                <ol style={{ fontSize: '0.78rem', color: 'hsl(var(--smoke))', paddingLeft: '1.25rem', lineHeight: '1.8' }}>
-                  <li>Abre tu bandeja de entrada</li>
-                  <li>Busca el correo de verificación (revisa spam)</li>
-                  <li>Haz clic en el enlace de confirmación</li>
-                  <li>Regresa aquí e inicia sesión</li>
-                </ol>
-              </div>
-              <button className="btn-neon" onClick={() => setMode('login')} style={{ width: '100%', marginBottom: '0.75rem' }}>
-                IR AL LOGIN
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (otpCode.length !== 6) { setErrors({ otp: 'El código debe tener 6 dígitos' }); return; }
+                setLoading(true);
+                const result = await verifyEmailOtp(confirmEmail, otpCode);
+                if (result.success) {
+                  addToast('✅ ¡Email verificado! Bienvenido 💪', 'success');
+                  setOtpCode('');
+                  onLogin();
+                } else {
+                  addToast(result.message, 'error');
+                  setErrors({ otp: result.message });
+                }
+                setLoading(false);
+              }} noValidate>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'hsl(var(--smoke))', letterSpacing: '0.12em', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                    CÓDIGO DE VERIFICACIÓN
+                  </label>
+                  <input className="input-dark" type="text" maxLength={6} placeholder="000000" value={otpCode}
+                    onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors({}); }}
+                    style={{ textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5em', fontFamily: "'Bebas Neue', sans-serif", ...(errors.otp ? { borderColor: 'hsl(var(--destructive))' } : {}) }}
+                    autoFocus />
+                  {errors.otp && <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.75rem', marginTop: '0.5rem' }}>{errors.otp}</p>}
+                </div>
+                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '0.75rem' }}>
+                  {loading ? 'VERIFICANDO...' : 'VERIFICAR CÓDIGO'}
+                </button>
+              </form>
+              <button
+                className="btn-ghost"
+                disabled={resendCooldown > 0 || loading}
+                onClick={async () => {
+                  setLoading(true);
+                  const result = await resendVerificationCode(confirmEmail);
+                  addToast(result.message, result.success ? 'success' : 'error');
+                  if (result.success) {
+                    setResendCooldown(60);
+                    const interval = setInterval(() => {
+                      setResendCooldown(prev => {
+                        if (prev <= 1) { clearInterval(interval); return 0; }
+                        return prev - 1;
+                      });
+                    }, 1000);
+                  }
+                  setLoading(false);
+                }}
+                style={{ width: '100%', marginBottom: '0.75rem' }}
+              >
+                {resendCooldown > 0 ? `REENVIAR CÓDIGO (${resendCooldown}s)` : '📩 REENVIAR CÓDIGO'}
               </button>
-              <p style={{ fontSize: '0.72rem', color: 'hsl(var(--smoke))' }}>
-                🔒 Tu cuenta estará activa después de verificar tu email
-              </p>
+              <div style={{
+                padding: '0.75rem', borderRadius: '0.5rem', background: 'hsl(var(--neon) / 0.05)',
+                border: '1px solid hsl(var(--neon) / 0.2)', marginBottom: '1rem'
+              }}>
+                <p style={{ fontSize: '0.75rem', color: 'hsl(var(--smoke))', lineHeight: '1.5' }}>
+                  📌 Revisa tu bandeja de entrada y la carpeta de spam. El código expira en unos minutos.
+                </p>
+              </div>
+              <button className="btn-ghost" onClick={() => { setMode('login'); setOtpCode(''); setErrors({}); }} style={{ width: '100%' }}>
+                ← Volver al Login
+              </button>
             </motion.div>
           )}
 
