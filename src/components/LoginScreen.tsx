@@ -19,6 +19,8 @@ export function LoginScreen({ onLogin, onMfaPending, addToast }: LoginScreenProp
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [mfaCode, setMfaCode] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Recovery
   const [recoveryEmail, setRecoveryEmail] = useState('');
