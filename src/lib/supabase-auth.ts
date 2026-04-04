@@ -263,13 +263,13 @@ async function getAppUser(user: User): Promise<AppUser | null> {
 }
 
 // ─── Auth State Listener ────────────────────
-export function onAuthStateChange(callback: (user: AppUser | null) => void) {
+export function onAuthStateChange(callback: (user: AppUser | null, event?: string) => void) {
   return supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session?.user) {
       const appUser = await getAppUser(session.user);
-      callback(appUser);
+      callback(appUser, event);
     } else if (event === 'SIGNED_OUT') {
-      callback(null);
+      callback(null, event);
     }
   });
 }

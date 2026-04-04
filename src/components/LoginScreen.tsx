@@ -5,6 +5,7 @@ import { RobotVerify } from './RobotVerify';
 
 interface LoginScreenProps {
   onLogin: () => void;
+  onMfaPending?: () => void;
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
