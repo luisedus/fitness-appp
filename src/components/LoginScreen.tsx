@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signIn, signUp, verifyMfaLogin, requestPasswordReset, type UserRole } from '../lib/supabase-auth';
+import { signIn, signUp, verifyMfaLogin, requestPasswordReset, verifyEmailOtp, resendVerificationCode, type UserRole } from '../lib/supabase-auth';
 import { RobotVerify } from './RobotVerify';
 
 interface LoginScreenProps {
