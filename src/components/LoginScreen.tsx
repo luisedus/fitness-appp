@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { loginUser, registerUser, resendVerificationEmail, sendPasswordReset, type UserRole } from '../lib/auth';
+import { loginUser, startRegistration, verifyOtp, verifyMfaCode, type UserRole } from '../lib/auth';
 import { RobotVerify } from './RobotVerify';
+import { RecoveryFlow } from './RecoveryFlow';
 
 interface LoginScreenProps {
   onLogin: () => void;
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-sent' | 'recovery';
+type Mode = 'login' | 'register-select' | 'register-member' | 'register-coach' | 'verify-otp' | 'mfa-verify' | 'recovery';
 
 export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
@@ -16,17 +17,21 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [isVerifiedReg, setIsVerifiedReg] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [otpCode, setOtpCode] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
-  const [recoveryEmail, setRecoveryEmail] = useState('');
-  const [recoveryMessage, setRecoveryMessage] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaPendingUser, setMfaPendingUser] = useState<string>('');
 
+  // Login form
   const [loginData, setLoginData] = useState({ email: '', password: '' });
 
+  // Register member form
   const [memberData, setMemberData] = useState({
     name: '', email: '', password: '', age: '', gender: 'hombre' as 'hombre' | 'mujer',
     level: 'Principiante' as 'Principiante' | 'Intermedio' | 'Pro',
   });
 
+  // Register coach form
   const [coachData, setCoachData] = useState({
     name: '', email: '', password: '', specialty: '', certification: '', experience: '',
   });
@@ -43,7 +48,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     const errs: Record<string, string> = {};
     if (!memberData.name.trim() || memberData.name.trim().length < 3) errs.name = 'Mínimo 3 caracteres';
     if (!memberData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(memberData.email)) errs.email = 'Email inválido';
-    if (!memberData.password || memberData.password.length < 6) errs.password = 'Mínimo 6 caracteres';
+    if (!memberData.password || memberData.password.length < 4) errs.password = 'Mínimo 4 caracteres';
     const age = parseInt(memberData.age);
     if (!memberData.age || isNaN(age) || age < 14 || age > 99) errs.age = 'Edad entre 14 y 99 años';
     if (!isVerifiedReg) errs.robot = 'Completa la verificación';
@@ -54,7 +59,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     const errs: Record<string, string> = {};
     if (!coachData.name.trim() || coachData.name.trim().length < 3) errs.name = 'Mínimo 3 caracteres';
     if (!coachData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(coachData.email)) errs.email = 'Email inválido';
-    if (!coachData.password || coachData.password.length < 6) errs.password = 'Mínimo 6 caracteres';
+    if (!coachData.password || coachData.password.length < 4) errs.password = 'Mínimo 4 caracteres';
     if (!coachData.specialty.trim()) errs.specialty = 'Especialidad requerida';
     if (!coachData.certification.trim()) errs.certification = 'Certificación requerida';
     if (!coachData.experience.trim()) errs.experience = 'Experiencia requerida';
@@ -62,28 +67,52 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     return errs;
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validateLogin();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
-    const result = await loginUser(loginData.email, loginData.password);
-    if (result.success) {
-      addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 💪`, 'success');
-      onLogin();
-    } else {
-      addToast(result.message, 'error');
-      setErrors({ general: result.message });
-    }
-    setLoading(false);
+    setTimeout(() => {
+      const result = loginUser(loginData.email, loginData.password);
+      if (result.success) {
+        if (result.requiresMfa) {
+          setMfaPendingUser(result.user?.name || '');
+          alert(`🛡️ Código MFA enviado a tu email:\n\n🔑 ${result.message.split(': ')[1]}\n\n(Simulación)`);
+          setMode('mfa-verify');
+        } else {
+          addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 💪`, 'success');
+          onLogin();
+        }
+      } else {
+        addToast(result.message, 'error');
+        setErrors({ general: result.message });
+      }
+      setLoading(false);
+    }, 600);
   };
 
-  const handleRegisterMember = async (e: React.FormEvent) => {
+  const handleMfaVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mfaCode.length !== 6) { setErrors({ mfa: 'El código debe tener 6 dígitos' }); return; }
+    setLoading(true);
+    setTimeout(() => {
+      const result = verifyMfaCode(mfaCode);
+      if (result.success) {
+        addToast(`¡Bienvenido, ${result.user?.name || 'Usuario'}! 🛡️💪`, 'success');
+        onLogin();
+      } else {
+        addToast(result.message, 'error');
+        setErrors({ mfa: result.message });
+      }
+      setLoading(false);
+    }, 600);
+  };
+
+  const handleRegisterMember = (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validateMember();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    setLoading(true);
-    const result = await registerUser({
+    const result = startRegistration({
       name: memberData.name,
       email: memberData.email,
       password: memberData.password,
@@ -92,22 +121,20 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       gender: memberData.gender,
       level: memberData.level,
     });
-    setLoading(false);
     if (result.success) {
       setPendingEmail(memberData.email);
-      addToast(result.message, 'success');
-      setMode('verify-sent');
+      alert(`📧 Código de verificación enviado a ${memberData.email}:\n\n🔑 ${result.code}\n\n(Simulación — en producción se enviaría por email real)`);
+      setMode('verify-otp');
     } else {
       addToast(result.message, 'error');
     }
   };
 
-  const handleRegisterCoach = async (e: React.FormEvent) => {
+  const handleRegisterCoach = (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validateCoach();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    setLoading(true);
-    const result = await registerUser({
+    const result = startRegistration({
       name: coachData.name,
       email: coachData.email,
       password: coachData.password,
@@ -116,31 +143,34 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       certification: coachData.certification,
       experience: coachData.experience,
     });
-    setLoading(false);
     if (result.success) {
       setPendingEmail(coachData.email);
-      addToast(result.message, 'success');
-      setMode('verify-sent');
+      alert(`📧 Código de verificación enviado a ${coachData.email}:\n\n🔑 ${result.code}\n\n(Simulación — en producción se enviaría por email real)`);
+      setMode('verify-otp');
     } else {
       addToast(result.message, 'error');
     }
   };
 
-  const handleResendEmail = async () => {
-    setLoading(true);
-    const result = await resendVerificationEmail(pendingEmail);
-    addToast(result.message, result.success ? 'success' : 'error');
-    setLoading(false);
-  };
-
-  const handleRecovery = async (e: React.FormEvent) => {
+  const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryEmail.trim()) { setErrors({ recovery: 'Ingresa tu email' }); return; }
+    if (otpCode.length !== 6) {
+      setErrors({ otp: 'El código debe tener 6 dígitos' });
+      return;
+    }
     setLoading(true);
-    const result = await sendPasswordReset(recoveryEmail);
-    setRecoveryMessage(result.message);
-    addToast(result.message, result.success ? 'success' : 'error');
-    setLoading(false);
+    setTimeout(() => {
+      const result = verifyOtp(otpCode);
+      if (result.success) {
+        addToast('✅ ¡Cuenta verificada y creada! Ahora puedes iniciar sesión.', 'success');
+        setMode('login');
+        setOtpCode('');
+      } else {
+        addToast(result.message, 'error');
+        setErrors({ otp: result.message });
+      }
+      setLoading(false);
+    }, 600);
   };
 
   const FieldError = ({ field }: { field: string }) =>
@@ -155,12 +185,14 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   });
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'hsl(var(--carbon))',
-      display: 'flex',
-      flexDirection: 'column' as const,
-    }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'hsl(var(--carbon))',
+        display: 'flex',
+        flexDirection: 'column' as const,
+      }}
+    >
       {/* Navbar */}
       <nav style={{
         background: 'hsl(var(--graphite))',
@@ -177,6 +209,18 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '0.08em' }}>
           <span style={{ color: 'hsl(var(--foreground))' }}>GYMBRO</span>
           <span style={{ color: 'hsl(var(--neon))' }}>'S</span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {['TODOS', 'HOMBRE', 'MUJER'].map((f, i) => (
+            <span key={f} className={`filter-chip ${i === 0 ? 'active' : 'inactive'}`} style={{ fontSize: '0.72rem' }}>
+              {f}
+            </span>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+          <span style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', cursor: 'pointer' }}>Inicio</span>
+          <span style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', cursor: 'pointer' }}>Rutinas ▾</span>
+          <span style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', cursor: 'pointer' }}>Mi Perfil ▾</span>
         </div>
       </nav>
 
@@ -219,8 +263,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                   </label>
                   <input
                     className="input-dark"
-                    type="email"
-                    placeholder="tu@correo.com"
+                    type="text"
+                    placeholder="tu@correo.com o 'admin'"
                     value={loginData.email}
                     onChange={e => { setLoginData(p => ({ ...p, email: e.target.value })); setErrors({}); }}
                     style={inputStyle('email')}
@@ -282,7 +326,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
 
               <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'hsl(var(--neon) / 0.05)', borderRadius: '0.5rem', border: '1px solid hsl(var(--neon) / 0.2)' }}>
                 <p style={{ fontSize: '0.75rem', color: 'hsl(var(--smoke))', textAlign: 'center' }}>
-                  🔒 Autenticación real con verificación de email
+                  🔑 Admin: <strong style={{ color: 'hsl(var(--neon))' }}>admin</strong> / <strong style={{ color: 'hsl(var(--neon))' }}>1234</strong>
                 </p>
               </div>
             </motion.div>
@@ -360,7 +404,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                 {[
                   { label: 'Nombre completo', key: 'name', type: 'text', placeholder: 'Tu nombre...' },
                   { label: 'Email', key: 'email', type: 'email', placeholder: 'tu@correo.com' },
-                  { label: 'Contraseña', key: 'password', type: 'password', placeholder: 'Mínimo 6 caracteres' },
+                  { label: 'Contraseña', key: 'password', type: 'password', placeholder: '••••••••' },
                   { label: 'Edad', key: 'age', type: 'number', placeholder: 'Tu edad...' },
                 ].map(({ label, key, type, placeholder }) => (
                   <div key={key} style={{ marginBottom: '1rem' }}>
@@ -407,8 +451,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                   <RobotVerify onVerified={() => setIsVerifiedReg(true)} />
                   <FieldError field="robot" />
                 </div>
-                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
-                  {loading ? 'REGISTRANDO...' : 'CREAR CUENTA'}
+                <button className="btn-neon" type="submit" style={{ width: '100%', marginBottom: '1rem' }}>
+                  CREAR CUENTA
                 </button>
               </form>
               <button className="btn-ghost" onClick={() => { setMode('register-select'); setErrors({}); }} style={{ width: '100%' }}>
@@ -436,7 +480,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                 {[
                   { label: 'Nombre completo', key: 'name', type: 'text', placeholder: 'Tu nombre...' },
                   { label: 'Email', key: 'email', type: 'email', placeholder: 'tu@correo.com' },
-                  { label: 'Contraseña', key: 'password', type: 'password', placeholder: 'Mínimo 6 caracteres' },
+                  { label: 'Contraseña', key: 'password', type: 'password', placeholder: '••••••••' },
                   { label: 'Especialidad', key: 'specialty', type: 'text', placeholder: 'Ej: Crossfit, Musculación...' },
                   { label: 'Certificación', key: 'certification', type: 'text', placeholder: 'Ej: NSCA-CPT, ACE...' },
                   { label: 'Años de experiencia', key: 'experience', type: 'text', placeholder: 'Ej: 3 años...' },
@@ -460,8 +504,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                   <RobotVerify onVerified={() => setIsVerifiedReg(true)} />
                   <FieldError field="robot" />
                 </div>
-                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
-                  {loading ? 'REGISTRANDO...' : 'CREAR CUENTA COACH'}
+                <button className="btn-neon" type="submit" style={{ width: '100%', marginBottom: '1rem' }}>
+                  CREAR CUENTA COACH
                 </button>
               </form>
               <button className="btn-ghost" onClick={() => { setMode('register-select'); setErrors({}); }} style={{ width: '100%' }}>
@@ -470,10 +514,10 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
             </motion.div>
           )}
 
-          {/* VERIFICATION SENT */}
-          {mode === 'verify-sent' && (
+          {/* VERIFY OTP */}
+          {mode === 'verify-otp' && (
             <motion.div
-              key="verify-sent"
+              key="verify-otp"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -24 }}
@@ -483,38 +527,53 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
             >
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📧</div>
               <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', marginBottom: '0.5rem' }}>
-                <span style={{ color: 'hsl(var(--foreground))' }}>VERIFICA TU </span>
+                <span style={{ color: 'hsl(var(--foreground))' }}>VERIFICAR </span>
                 <span style={{ color: 'hsl(var(--neon))' }}>EMAIL</span>
               </h2>
-              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                Hemos enviado un enlace de verificación a
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '2rem' }}>
+                Ingresa el código de 6 dígitos enviado a{' '}
+                <strong style={{ color: 'hsl(var(--neon))' }}>{pendingEmail}</strong>
               </p>
-              <p style={{ color: 'hsl(var(--neon))', fontWeight: '700', fontSize: '1rem', marginBottom: '1.5rem' }}>
-                {pendingEmail}
+              <form onSubmit={handleVerifyOtp} noValidate>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <input
+                    className="input-dark"
+                    type="text"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={otpCode}
+                    onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors({}); }}
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '2rem',
+                      letterSpacing: '0.5em',
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      ...(errors.otp ? { borderColor: 'hsl(var(--destructive))' } : {}),
+                    }}
+                  />
+                  {errors.otp && (
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      {errors.otp}
+                    </p>
+                  )}
+                </div>
+                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
+                  {loading ? 'VERIFICANDO...' : 'VERIFICAR CÓDIGO'}
+                </button>
+              </form>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                💡 El código apareció en un alert al registrarte (simulación)
               </p>
-              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.8rem', marginBottom: '2rem', lineHeight: '1.5' }}>
-                Revisa tu bandeja de entrada (y la carpeta de spam). Haz clic en el enlace del correo para activar tu cuenta.
-              </p>
-
-              <button
-                className="btn-neon"
-                onClick={handleResendEmail}
-                disabled={loading}
-                style={{ width: '100%', marginBottom: '1rem' }}
-              >
-                {loading ? 'REENVIANDO...' : '📧 REENVIAR EMAIL DE VERIFICACIÓN'}
-              </button>
-
-              <button className="btn-ghost" onClick={() => { setMode('login'); setErrors({}); }} style={{ width: '100%' }}>
-                ← Volver al Login
+              <button className="btn-ghost" onClick={() => { setMode('register-select'); setErrors({}); setOtpCode(''); }} style={{ width: '100%' }}>
+                ← Volver al registro
               </button>
             </motion.div>
           )}
 
-          {/* RECOVERY */}
-          {mode === 'recovery' && (
+          {/* MFA VERIFY */}
+          {mode === 'mfa-verify' && (
             <motion.div
-              key="recovery"
+              key="mfa-verify"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -24 }}
@@ -522,48 +581,55 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
               className="glass-card"
               style={{ width: '100%', maxWidth: '440px', borderRadius: '1rem', padding: '2.5rem 2rem', textAlign: 'center' }}
             >
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔑</div>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
               <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', marginBottom: '0.5rem' }}>
-                <span style={{ color: 'hsl(var(--foreground))' }}>RECUPERAR </span>
-                <span style={{ color: 'hsl(var(--neon))' }}>CONTRASEÑA</span>
+                <span style={{ color: 'hsl(var(--foreground))' }}>VERIFICACIÓN </span>
+                <span style={{ color: 'hsl(var(--neon))' }}>MFA</span>
               </h2>
               <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '2rem' }}>
-                Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña
+                Hola <strong style={{ color: 'hsl(var(--neon))' }}>{mfaPendingUser}</strong>, ingresa el código MFA de 6 dígitos
               </p>
-
-              <form onSubmit={handleRecovery} noValidate>
-                <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
-                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'hsl(var(--smoke))', letterSpacing: '0.12em', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                    Email
-                  </label>
+              <form onSubmit={handleMfaVerify} noValidate>
+                <div style={{ marginBottom: '1.5rem' }}>
                   <input
                     className="input-dark"
-                    type="email"
-                    placeholder="tu@correo.com"
-                    value={recoveryEmail}
-                    onChange={e => { setRecoveryEmail(e.target.value); setErrors({}); setRecoveryMessage(''); }}
-                    style={inputStyle('recovery')}
+                    type="text"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={mfaCode}
+                    onChange={e => { setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors({}); }}
+                    style={{
+                      textAlign: 'center', fontSize: '2rem', letterSpacing: '0.5em',
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      ...(errors.mfa ? { borderColor: 'hsl(var(--destructive))' } : {}),
+                    }}
                   />
-                  <FieldError field="recovery" />
+                  {errors.mfa && (
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      {errors.mfa}
+                    </p>
+                  )}
                 </div>
-
-                {recoveryMessage && (
-                  <p style={{ color: 'hsl(var(--neon))', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                    {recoveryMessage}
-                  </p>
-                )}
-
                 <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
-                  {loading ? 'ENVIANDO...' : 'ENVIAR ENLACE DE RECUPERACIÓN'}
+                  {loading ? 'VERIFICANDO...' : 'VERIFICAR MFA'}
                 </button>
               </form>
-
-              <button className="btn-ghost" onClick={() => { setMode('login'); setErrors({}); setRecoveryMessage(''); }} style={{ width: '100%' }}>
+              <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                💡 El código apareció en un alert (simulación de email MFA)
+              </p>
+              <button className="btn-ghost" onClick={() => { setMode('login'); setMfaCode(''); setErrors({}); }} style={{ width: '100%' }}>
                 ← Volver al Login
               </button>
             </motion.div>
           )}
 
+          {/* RECOVERY */}
+          {mode === 'recovery' && (
+            <RecoveryFlow
+              addToast={addToast}
+              onClose={() => setMode('login')}
+            />
+          )}
         </AnimatePresence>
       </div>
     </div>

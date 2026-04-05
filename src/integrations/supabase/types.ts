@@ -14,30 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      blocked_users: {
-        Row: {
-          blocked_at: string
-          blocked_by: string
-          id: string
-          reason: string
-          user_id: string
-        }
-        Insert: {
-          blocked_at?: string
-          blocked_by: string
-          id?: string
-          reason?: string
-          user_id: string
-        }
-        Update: {
-          blocked_at?: string
-          blocked_by?: string
-          id?: string
-          reason?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           age: number | null
@@ -85,7 +61,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       app_role: "coach" | "member"

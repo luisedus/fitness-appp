@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { type AuthUser, logoutUser } from '../lib/auth';
+import { type AuthUser, logoutUser, getSession } from '../lib/auth';
 import { type Member, updateMember } from '../lib/data';
 import { MemberManager } from './MemberManager';
 import { CoachPanel } from './CoachPanel';
 import { MuscleCarousel } from './MuscleCarousel';
 import { UserSettings } from './UserSettings';
+import { SSODemo } from './SSODemo';
 
 interface DashboardProps {
   user: AuthUser;
@@ -21,13 +22,14 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
   const [search, setSearch] = useState('');
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSSO, setShowSSO] = useState(false);
   const [levelChangeWarn, setLevelChangeWarn] = useState(false);
   const [pendingLevel, setPendingLevel] = useState<Member['level'] | null>(null);
-  const [userLevel, setUserLevel] = useState<Member['level']>((user.level as Member['level']) || 'Principiante');
+  const [userLevel, setUserLevel] = useState<Member['level']>(user.level || 'Principiante');
   const [muscleFilter, setMuscleFilter] = useState('');
   const [currentUser, setCurrentUser] = useState<AuthUser>(user);
-  const handleLogout = async () => {
-    await logoutUser();
+  const handleLogout = () => {
+    logoutUser();
     addToast('Sesión cerrada. ¡Hasta pronto! 👋', 'info');
     onLogout();
   };
@@ -252,6 +254,13 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
               >
                 ⚙️ Configuración
               </button>
+              <button
+                className="btn-edit"
+                style={{ flex: 1, textAlign: 'center', padding: '0.5rem', fontSize: '0.75rem' }}
+                onClick={() => { setShowSSO(true); setShowProfile(false); }}
+              >
+                🔗 SSO Demo
+              </button>
             </div>
 
             <button
@@ -273,6 +282,17 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
             onUserUpdate={(u) => setCurrentUser(u)}
             addToast={addToast}
             onClose={() => setShowSettings(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* SSO Demo Modal */}
+      <AnimatePresence>
+        {showSSO && (
+          <SSODemo
+            user={currentUser}
+            addToast={addToast}
+            onClose={() => setShowSSO(false)}
           />
         )}
       </AnimatePresence>
