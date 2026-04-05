@@ -26,8 +26,8 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
   const [userLevel, setUserLevel] = useState<Member['level']>((user.level as Member['level']) || 'Principiante');
   const [muscleFilter, setMuscleFilter] = useState('');
   const [currentUser, setCurrentUser] = useState<AuthUser>(user);
-  const handleLogout = () => {
-    logoutUser();
+  const handleLogout = async () => {
+    await logoutUser();
     addToast('Sesión cerrada. ¡Hasta pronto! 👋', 'info');
     onLogout();
   };
