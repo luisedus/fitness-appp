@@ -252,13 +252,6 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
               >
                 ⚙️ Configuración
               </button>
-              <button
-                className="btn-edit"
-                style={{ flex: 1, textAlign: 'center', padding: '0.5rem', fontSize: '0.75rem' }}
-                onClick={() => { setShowSSO(true); setShowProfile(false); }}
-              >
-                🔗 SSO Demo
-              </button>
             </div>
 
             <button
@@ -280,17 +273,6 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
             onUserUpdate={(u) => setCurrentUser(u)}
             addToast={addToast}
             onClose={() => setShowSettings(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* SSO Demo Modal */}
-      <AnimatePresence>
-        {showSSO && (
-          <SSODemo
-            user={currentUser}
-            addToast={addToast}
-            onClose={() => setShowSSO(false)}
           />
         )}
       </AnimatePresence>
