@@ -22,9 +22,8 @@ export function Dashboard({ user, onLogout, addToast }: DashboardProps) {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [levelChangeWarn, setLevelChangeWarn] = useState(false);
-  const [levelChangeWarn, setLevelChangeWarn] = useState(false);
   const [pendingLevel, setPendingLevel] = useState<Member['level'] | null>(null);
-  const [userLevel, setUserLevel] = useState<Member['level']>(user.level || 'Principiante');
+  const [userLevel, setUserLevel] = useState<Member['level']>((user.level as Member['level']) || 'Principiante');
   const [muscleFilter, setMuscleFilter] = useState('');
   const [currentUser, setCurrentUser] = useState<AuthUser>(user);
   const handleLogout = () => {
