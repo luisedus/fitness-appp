@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { name: "ADMIN MASTER", role: "coach" },
+      user_metadata: { name: "ADMIN MASTER", role: "admin" },
     });
 
     if (error) throw error;
