@@ -16,19 +16,14 @@ export interface AuthUser {
   level?: string;
 }
 
-const ADMIN_EMAIL = 'admin@admin.com';
-
-function isAdminEmail(email: string): boolean {
-  return email.toLowerCase() === ADMIN_EMAIL;
-}
-
 function buildAuthUser(id: string, email: string, profile: any, metadata: any): AuthUser {
+  const role = (profile?.role as UserRole) || 'member';
   return {
     id,
     email,
     name: profile?.name || metadata?.name || email,
-    role: (profile?.role as UserRole) || 'member',
-    isAdminMaster: isAdminEmail(email),
+    role,
+    isAdminMaster: role === 'admin',
     specialty: profile?.specialty || undefined,
     certification: profile?.certification || undefined,
     experience: profile?.experience || undefined,
