@@ -1,63 +1,130 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { updatePassword } from '../lib/supabase-auth';
+import { motion } from 'framer-motion';
+import { updatePassword } from '../lib/auth';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Listen for the PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setReady(true);
+      }
+    });
+
+    // Check if already in recovery mode from URL hash
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery')) {
+      setReady(true);
+    }
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPwd.length < 6) { setMessage('La contraseña debe tener al menos 6 caracteres.'); return; }
-    if (newPwd !== confirmPwd) { setMessage('Las contraseñas no coinciden.'); return; }
+    setError('');
+    setMessage('');
+
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
     setLoading(true);
-    const result = await updatePassword(newPwd);
-    setMessage(result.message);
-    setSuccess(result.success);
+    const result = await updatePassword(password);
     setLoading(false);
+
+    if (result.success) {
+      setMessage('¡Contraseña actualizada! Redirigiendo...');
+      setTimeout(() => navigate('/'), 2000);
+    } else {
+      setError(result.message);
+    }
   };
 
   return (
     <div style={{
-      minHeight: '100vh', background: 'hsl(var(--carbon))',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem',
+      minHeight: '100vh',
+      background: 'hsl(var(--carbon))',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
     }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '440px', borderRadius: '1rem', padding: '2.5rem 2rem', textAlign: 'center' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card"
+        style={{ width: '100%', maxWidth: '440px', borderRadius: '1rem', padding: '2.5rem 2rem', textAlign: 'center' }}
+      >
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔐</div>
-        <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', marginBottom: '0.5rem' }}>
+        <h1 style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: '2rem',
+          marginBottom: '1.5rem',
+        }}>
           <span style={{ color: 'hsl(var(--foreground))' }}>NUEVA </span>
           <span style={{ color: 'hsl(var(--neon))' }}>CONTRASEÑA</span>
         </h1>
 
-        {success ? (
-          <div>
-            <p style={{ color: 'hsl(var(--neon))', fontSize: '0.9rem', marginBottom: '1.5rem' }}>✅ {message}</p>
-            <a href="/" className="btn-neon" style={{ display: 'inline-block', textDecoration: 'none', padding: '0.75rem 2rem' }}>
-              IR AL LOGIN
-            </a>
-          </div>
+        {!ready ? (
+          <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.9rem' }}>
+            Verificando enlace de recuperación...
+          </p>
         ) : (
-          <form onSubmit={handleSubmit} noValidate>
-            <p style={{ color: 'hsl(var(--smoke))', fontSize: '0.85rem', marginBottom: '2rem' }}>
-              Ingresa tu nueva contraseña (mínimo 6 caracteres)
-            </p>
-            <div style={{ marginBottom: '1rem' }}>
-              <input className="input-dark" type="password" placeholder="Nueva contraseña" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', color: 'hsl(var(--smoke))', letterSpacing: '0.12em', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+                Nueva contraseña
+              </label>
+              <input
+                className="input-dark"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
             </div>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <input className="input-dark" type="password" placeholder="Confirmar contraseña" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} />
+            <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', color: 'hsl(var(--smoke))', letterSpacing: '0.12em', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+                Confirmar contraseña
+              </label>
+              <input
+                className="input-dark"
+                type="password"
+                placeholder="Repite la contraseña"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+              />
             </div>
-            {message && <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.8rem', marginBottom: '1rem' }}>{message}</p>}
+
+            {error && (
+              <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.8rem', marginBottom: '1rem' }}>{error}</p>
+            )}
+            {message && (
+              <p style={{ color: 'hsl(var(--neon))', fontSize: '0.8rem', marginBottom: '1rem' }}>{message}</p>
+            )}
+
             <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%' }}>
               {loading ? 'ACTUALIZANDO...' : 'ACTUALIZAR CONTRASEÑA'}
             </button>
           </form>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

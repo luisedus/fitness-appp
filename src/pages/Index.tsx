@@ -1,36 +1,33 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { getCurrentUser, onAuthStateChange, type AppUser } from '../lib/supabase-auth';
+import { getSession, onAuthStateChange, type AuthUser } from '../lib/auth';
 import { LoginScreen } from '../components/LoginScreen';
 import { Dashboard } from '../components/Dashboard';
 import { ToastContainer, useToasts } from '../components/ToastSystem';
 
 const Index = () => {
-  const [user, setUser] = useState<AppUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const { toasts, addToast, removeToast } = useToasts();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = onAuthStateChange(async (appUser) => {
-      setUser(appUser);
+    // Set up auth listener FIRST
+    const { data: { subscription } } = onAuthStateChange((authUser) => {
+      setUser(authUser);
       setLoading(false);
     });
 
     // Then check current session
-    const checkSession = async () => {
-      const appUser = await getCurrentUser();
-      setUser(appUser);
+    getSession().then((session) => {
+      setUser(session);
       setLoading(false);
-    };
-    checkSession();
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const handleLogin = async () => {
-    const appUser = await getCurrentUser();
-    setUser(appUser);
+    const session = await getSession();
+    setUser(session);
   };
 
   const handleLogout = () => {
@@ -47,10 +44,16 @@ const Index = () => {
         justifyContent: 'center',
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}>🏋️</div>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', color: 'hsl(var(--neon))' }}>
-            CARGANDO...
+          <div style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: '2rem',
+            letterSpacing: '0.08em',
+            marginBottom: '1rem',
+          }}>
+            <span style={{ color: 'hsl(var(--foreground))' }}>GYMBRO</span>
+            <span style={{ color: 'hsl(var(--neon))' }}>'S</span>
           </div>
+          <div style={{ color: 'hsl(var(--smoke))', fontSize: '0.9rem' }}>Cargando...</div>
         </div>
       </div>
     );
