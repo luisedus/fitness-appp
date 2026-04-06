@@ -58,7 +58,7 @@ export async function registerUser(data: {
   certification?: string;
   experience?: string;
 }): Promise<{ success: boolean; message: string }> {
-  if (isAdminEmail(data.email)) {
+  if (data.email.toLowerCase() === 'admin@admin.com') {
     return { success: false, message: 'Este email está reservado.' };
   }
 
