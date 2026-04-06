@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getSession, onAuthStateChange, type AuthUser } from '../lib/auth';
 import { LoginScreen } from '../components/LoginScreen';
 import { Dashboard } from '../components/Dashboard';
+import { AdminDashboard } from '../components/AdminDashboard';
 import { ToastContainer, useToasts } from '../components/ToastSystem';
 
 const Index = () => {
@@ -10,13 +11,11 @@ const Index = () => {
   const { toasts, addToast, removeToast } = useToasts();
 
   useEffect(() => {
-    // Set up auth listener FIRST
     const { data: { subscription } } = onAuthStateChange((authUser) => {
       setUser(authUser);
       setLoading(false);
     });
 
-    // Then check current session
     getSession().then((session) => {
       setUser(session);
       setLoading(false);
@@ -62,7 +61,11 @@ const Index = () => {
   return (
     <>
       {user ? (
-        <Dashboard user={user} onLogout={handleLogout} addToast={addToast} />
+        user.isAdminMaster ? (
+          <AdminDashboard user={user} onLogout={handleLogout} addToast={addToast} />
+        ) : (
+          <Dashboard user={user} onLogout={handleLogout} addToast={addToast} />
+        )
       ) : (
         <LoginScreen onLogin={handleLogin} addToast={addToast} />
       )}

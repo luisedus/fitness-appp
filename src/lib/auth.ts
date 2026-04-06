@@ -7,12 +7,47 @@ export interface AuthUser {
   email: string;
   name: string;
   role: UserRole;
+  isAdminMaster?: boolean;
   specialty?: string;
   certification?: string;
   experience?: string;
   age?: number;
   gender?: string;
   level?: string;
+}
+
+const ADMIN_EMAIL = 'admin@admin.com';
+
+function isAdminEmail(email: string): boolean {
+  return email.toLowerCase() === ADMIN_EMAIL;
+}
+
+function buildAuthUser(id: string, email: string, profile: any, metadata: any): AuthUser {
+  return {
+    id,
+    email,
+    name: profile?.name || metadata?.name || email,
+    role: (profile?.role as UserRole) || 'member',
+    isAdminMaster: isAdminEmail(email),
+    specialty: profile?.specialty || undefined,
+    certification: profile?.certification || undefined,
+    experience: profile?.experience || undefined,
+    age: profile?.age || undefined,
+    gender: profile?.gender || undefined,
+    level: profile?.level || undefined,
+  };
+}
+
+// ─── Log activity ───────────────────────────
+export async function logActivity(userId: string, action: string, details?: string) {
+  try {
+    await supabase.from('activity_logs').insert({
+      user_id: userId,
+      action,
+      details,
+      user_agent: navigator.userAgent,
+    });
+  } catch {}
 }
 
 // ─── Registration ───────────────────────────
@@ -28,6 +63,10 @@ export async function registerUser(data: {
   certification?: string;
   experience?: string;
 }): Promise<{ success: boolean; message: string }> {
+  if (isAdminEmail(data.email)) {
+    return { success: false, message: 'Este email está reservado.' };
+  }
+
   const { error } = await supabase.auth.signUp({
     email: data.email,
     password: data.password,
@@ -65,10 +104,7 @@ export async function loginUser(email: string, password: string): Promise<{
   user?: AuthUser;
   message: string;
 }> {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     if (error.message.includes('Email not confirmed')) {
@@ -84,37 +120,30 @@ export async function loginUser(email: string, password: string): Promise<{
     return { success: false, message: 'Error al iniciar sesión.' };
   }
 
-  // Check if blocked
-  const { data: blocked } = await supabase
-    .from('blocked_users')
-    .select('id')
-    .eq('user_id', data.user.id)
-    .maybeSingle();
+  // Admin bypasses block check
+  if (!isAdminEmail(email)) {
+    const { data: blocked } = await supabase
+      .from('blocked_users')
+      .select('id')
+      .eq('user_id', data.user.id)
+      .maybeSingle();
 
-  if (blocked) {
-    await supabase.auth.signOut();
-    return { success: false, message: '🚫 Tu cuenta ha sido bloqueada. Contacta al administrador.' };
+    if (blocked) {
+      await supabase.auth.signOut();
+      return { success: false, message: '🚫 Tu cuenta ha sido bloqueada. Contacta al administrador.' };
+    }
   }
 
-  // Get profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', data.user.id)
     .single();
 
-  const user: AuthUser = {
-    id: data.user.id,
-    email: data.user.email || email,
-    name: profile?.name || data.user.user_metadata?.name || email,
-    role: (profile?.role as UserRole) || 'member',
-    specialty: profile?.specialty || undefined,
-    certification: profile?.certification || undefined,
-    experience: profile?.experience || undefined,
-    age: profile?.age || undefined,
-    gender: profile?.gender || undefined,
-    level: profile?.level || undefined,
-  };
+  const user = buildAuthUser(data.user.id, data.user.email || email, profile, data.user.user_metadata);
+
+  // Log login
+  await logActivity(user.id, 'LOGIN', `Inicio de sesión: ${email}`);
 
   return { success: true, user, message: '¡Bienvenido de vuelta!' };
 }
@@ -124,15 +153,10 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email,
-    options: {
-      emailRedirectTo: window.location.origin,
-    },
+    options: { emailRedirectTo: window.location.origin },
   });
 
-  if (error) {
-    return { success: false, message: error.message };
-  }
-
+  if (error) return { success: false, message: error.message };
   return { success: true, message: '📧 Email de verificación reenviado. Revisa tu correo.' };
 }
 
@@ -142,24 +166,16 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
     redirectTo: `${window.location.origin}/reset-password`,
   });
 
-  if (error) {
-    return { success: false, message: error.message };
-  }
-
+  if (error) return { success: false, message: error.message };
   return { success: true, message: '📧 Se ha enviado un enlace de recuperación a tu correo.' };
 }
 
 export async function updatePassword(newPassword: string): Promise<{ success: boolean; message: string }> {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-  if (error) {
-    return { success: false, message: error.message };
-  }
-
+  if (error) return { success: false, message: error.message };
   return { success: true, message: '¡Contraseña actualizada exitosamente!' };
 }
 
-// ─── Change Password (from settings) ───────
 export async function changePassword(newPassword: string): Promise<{ success: boolean; message: string }> {
   if (newPassword.length < 6) {
     return { success: false, message: 'La contraseña debe tener al menos 6 caracteres.' };
@@ -178,18 +194,7 @@ export async function getSession(): Promise<AuthUser | null> {
     .eq('id', session.user.id)
     .single();
 
-  return {
-    id: session.user.id,
-    email: session.user.email || '',
-    name: profile?.name || session.user.user_metadata?.name || '',
-    role: (profile?.role as UserRole) || 'member',
-    specialty: profile?.specialty || undefined,
-    certification: profile?.certification || undefined,
-    experience: profile?.experience || undefined,
-    age: profile?.age || undefined,
-    gender: profile?.gender || undefined,
-    level: profile?.level || undefined,
-  };
+  return buildAuthUser(session.user.id, session.user.email || '', profile, session.user.user_metadata);
 }
 
 export async function logoutUser() {
@@ -197,7 +202,7 @@ export async function logoutUser() {
 }
 
 export function onAuthStateChange(callback: (user: AuthUser | null) => void) {
-  return supabase.auth.onAuthStateChange(async (event, session) => {
+  return supabase.auth.onAuthStateChange(async (_event, session) => {
     if (session?.user) {
       const { data: profile } = await supabase
         .from('profiles')
@@ -205,18 +210,7 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void) {
         .eq('id', session.user.id)
         .single();
 
-      callback({
-        id: session.user.id,
-        email: session.user.email || '',
-        name: profile?.name || session.user.user_metadata?.name || '',
-        role: (profile?.role as UserRole) || 'member',
-        specialty: profile?.specialty || undefined,
-        certification: profile?.certification || undefined,
-        experience: profile?.experience || undefined,
-        age: profile?.age || undefined,
-        gender: profile?.gender || undefined,
-        level: profile?.level || undefined,
-      });
+      callback(buildAuthUser(session.user.id, session.user.email || '', profile, session.user.user_metadata));
     } else {
       callback(null);
     }
