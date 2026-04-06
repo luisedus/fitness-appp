@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
         id: existing.id,
         name: "ADMIN MASTER",
         email,
-        role: "coach",
+        role: "admin",
       }, { onConflict: "id" });
 
       return new Response(JSON.stringify({ success: true, message: "Admin already exists", id: existing.id }), {
