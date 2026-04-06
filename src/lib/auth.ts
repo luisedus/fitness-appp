@@ -116,7 +116,7 @@ export async function loginUser(email: string, password: string): Promise<{
   }
 
   // Admin bypasses block check
-  if (!isAdminEmail(email)) {
+  if (data.user.email?.toLowerCase() !== 'admin@admin.com') {
     const { data: blocked } = await supabase
       .from('blocked_users')
       .select('id')

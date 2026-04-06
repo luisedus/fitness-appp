@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       id: data.user.id,
       name: "ADMIN MASTER",
       email,
-      role: "coach",
+      role: "admin",
     }, { onConflict: "id" });
 
     return new Response(JSON.stringify({ success: true, message: "Admin created", id: data.user.id }), {
