@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export type UserRole = 'coach' | 'member';
+export type UserRole = 'coach' | 'member' | 'admin';
 
 export interface AuthUser {
   id: string;
@@ -16,19 +16,14 @@ export interface AuthUser {
   level?: string;
 }
 
-const ADMIN_EMAIL = 'admin@admin.com';
-
-function isAdminEmail(email: string): boolean {
-  return email.toLowerCase() === ADMIN_EMAIL;
-}
-
 function buildAuthUser(id: string, email: string, profile: any, metadata: any): AuthUser {
+  const role = (profile?.role as UserRole) || 'member';
   return {
     id,
     email,
     name: profile?.name || metadata?.name || email,
-    role: (profile?.role as UserRole) || 'member',
-    isAdminMaster: isAdminEmail(email),
+    role,
+    isAdminMaster: role === 'admin',
     specialty: profile?.specialty || undefined,
     certification: profile?.certification || undefined,
     experience: profile?.experience || undefined,
@@ -63,7 +58,7 @@ export async function registerUser(data: {
   certification?: string;
   experience?: string;
 }): Promise<{ success: boolean; message: string }> {
-  if (isAdminEmail(data.email)) {
+  if (data.email.toLowerCase() === 'admin@admin.com') {
     return { success: false, message: 'Este email está reservado.' };
   }
 
@@ -121,7 +116,7 @@ export async function loginUser(email: string, password: string): Promise<{
   }
 
   // Admin bypasses block check
-  if (!isAdminEmail(email)) {
+  if (data.user.email?.toLowerCase() !== 'admin@admin.com') {
     const { data: blocked } = await supabase
       .from('blocked_users')
       .select('id')
