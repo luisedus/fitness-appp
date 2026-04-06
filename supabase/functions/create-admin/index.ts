@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
         id: existing.id,
         name: "ADMIN MASTER",
         email,
-        role: "admin",
+        role: "coach",
       }, { onConflict: "id" });
 
       return new Response(JSON.stringify({ success: true, message: "Admin already exists", id: existing.id }), {
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { name: "ADMIN MASTER", role: "admin" },
+      user_metadata: { name: "ADMIN MASTER", role: "coach" },
     });
 
     if (error) throw error;
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       id: data.user.id,
       name: "ADMIN MASTER",
       email,
-      role: "admin",
+      role: "coach",
     }, { onConflict: "id" });
 
     return new Response(JSON.stringify({ success: true, message: "Admin created", id: data.user.id }), {
