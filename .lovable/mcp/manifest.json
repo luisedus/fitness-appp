@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://dlhvsxbyihniwmznwhvs.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "gymbros-mcp",
+      "version": "0.1.0",
+      "title": "GYMBRO'S"
+    },
+    "tools": [
+      {
+        "name": "list_routines",
+        "title": "List GYMBRO'S routines",
+        "description": "List public GYMBRO'S workout routines. Filter by training level (Principiante, Intermedio, Pro) and/or target gender (hombre, mujer, todos).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": [
+                "Principiante",
+                "Intermedio",
+                "Pro"
+              ],
+              "description": "Filter by difficulty level."
+            },
+            "gender": {
+              "type": "string",
+              "enum": [
+                "hombre",
+                "mujer",
+                "todos"
+              ],
+              "description": "Filter by target gender."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_my_profile",
+        "title": "Get my GYMBRO'S profile",
+        "description": "Return the signed-in user's GYMBRO'S profile: name, role (coach/member/admin), training level, gender, age, and coach-specific fields.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_activity",
+        "title": "List my activity",
+        "description": "Return the signed-in user's recent activity log entries (logins, actions performed) in reverse chronological order.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max entries to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_my_level",
+        "title": "Update my training level",
+        "description": "Change the signed-in user's training level. Only valid for members. Values: Principiante, Intermedio, Pro.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": [
+                "Principiante",
+                "Intermedio",
+                "Pro"
+              ],
+              "description": "New training level."
+            }
+          },
+          "required": [
+            "level"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

@@ -14,6 +14,14 @@ const Index = () => {
     const { data: { subscription } } = onAuthStateChange((authUser) => {
       setUser(authUser);
       setLoading(false);
+      // If a next URL is present (e.g. OAuth consent flow), navigate there after sign-in.
+      if (authUser) {
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next");
+        if (next && next.startsWith("/") && !next.startsWith("//")) {
+          window.location.replace(next);
+        }
+      }
     });
 
     getSession().then((session) => {
