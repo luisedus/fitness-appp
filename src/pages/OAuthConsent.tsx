@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-type AuthorizationDetails = {
+type AuthDetails = {
   client?: { name?: string; logo_uri?: string; client_uri?: string };
   redirect_url?: string;
   redirect_to?: string;
@@ -12,7 +12,7 @@ type AuthorizationDetails = {
 export default function OAuthConsent() {
   const [params] = useSearchParams();
   const authorizationId = params.get("authorization_id") ?? "";
-  const [details, setDetails] = useState<AuthorizationDetails | null>(null);
+  const [details, setDetails] = useState<AuthDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -29,32 +29,32 @@ export default function OAuthConsent() {
         window.location.href = "/?next=" + encodeURIComponent(next);
         return;
       }
-      // @ts-expect-error beta namespace not yet in typings
       const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
       if (!active) return;
       if (error) {
         setError(error.message);
         return;
       }
-      const immediate = data?.redirect_url ?? data?.redirect_to;
-      if (immediate && !data?.client) {
+      const anyData = data as unknown as AuthDetails;
+      const immediate = anyData?.redirect_url ?? anyData?.redirect_to;
+      if (immediate && !anyData?.client) {
         window.location.href = immediate;
         return;
       }
-      setDetails(data);
+      setDetails(anyData);
     })();
     return () => { active = false; };
   }, [authorizationId]);
 
   async function decide(approve: boolean) {
     setBusy(true);
-    // @ts-expect-error beta namespace not yet in typings
     const oauth = supabase.auth.oauth;
     const { data, error } = approve
       ? await oauth.approveAuthorization(authorizationId)
       : await oauth.denyAuthorization(authorizationId);
     if (error) { setBusy(false); setError(error.message); return; }
-    const target = data?.redirect_url ?? data?.redirect_to;
+    const anyData = data as unknown as AuthDetails;
+    const target = anyData?.redirect_url ?? anyData?.redirect_to;
     if (!target) { setBusy(false); setError("No redirect returned by authorization server."); return; }
     window.location.href = target;
   }
