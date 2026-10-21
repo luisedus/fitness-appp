@@ -1,0 +1,49 @@
+AVISO DE PRIVACIDAD PARA USO DE LA APLICACIÓN WEB GYMBRO'S
+ESTIMADO USUARIO, para Gimbro's estamos conscientes de la importancia de proteger correctamente los datos personales de nuestros Usuarios. Es por ello y en congruencia con lo establecido en la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP), que GYMBRO'S, con domicilio en [zapopan, 303, Colonia. libertadores, C.P.20200, Aguascalientes, Ags., México], en su calidad de responsable, pone a su disposición el siguiente Aviso de Privacidad, a fin de que tenga pleno conocimiento sobre el tratamiento que se le dará a sus datos personales, así como facilitarle el ejercicio de los derechos que la LFPDPPP le otorga.
+
+1.- Datos Personales tratados.
+Los datos personales que recopilamos de nuestros Usuarios para el funcionamiento de la aplicación son: nombre completo, correo electrónico, contraseña (encriptada), género, fecha de nacimiento, y opcionalmente métricas físicas como peso, estatura y objetivos de acondicionamiento físico. Asimismo, en el caso de que el Usuario opte por contratar servicios Premium o de pago dentro de GYMBRO'S, se recopilará la información referente a la cuenta bancaria, tarjeta de crédito o tarjeta de débito a través de nuestras pasarelas de pago autorizadas.
+
+Cabe mencionar que todos los datos personales antes reseñados son indispensables para que GYMBRO'S pueda brindarle a sus Usuarios el servicio de registro y seguimiento de rutinas, por lo que, en caso de no aceptar el uso de los mismos, GYMBRO'S se verá imposibilitada para crear su cuenta y prestar los servicios ofrecidos en la plataforma. En caso de revocación del consentimiento o del ejercicio del derecho de cancelación u oposición, tendrá lugar, necesariamente, la eliminación de la cuenta del Usuario y la rescisión de los servicios, sin responsabilidad para GYMBRO'S.
+
+2.- Finalidades del tratamiento
+Sus datos personales son utilizados (tratados) para las siguientes finalidades primarias:
+(i) creación y gestión de su cuenta de usuario en la aplicación web;
+(ii) personalización de rutinas y seguimiento de su progreso físico;
+(iii) almacenamiento de su historial de entrenamientos en nuestras bases de datos en la nube;
+(iv) soporte técnico y contacto a través de correo electrónico u otros medios digitales;
+(v) facturación de los servicios contratados (si aplica).
+
+Asimismo, sus datos personales serán utilizados para las siguientes finalidades comerciales y de promoción (secundarias):
+(i) enviarle información relativa a nuevas actualizaciones, funciones o productos de la aplicación;
+(ii) realizar encuestas sobre la calidad y experiencia de uso (UI/UX) de la plataforma;
+(iii) hacerle llegar ofertas y promociones exclusivas de GYMBRO'S.
+
+En caso de que usted no desee que sus datos personales sean tratados para las finalidades secundarias antes descritas, usted podrá contactarnos en cualquier momento para limitar dicho tratamiento, a través de nuestro correo electrónico soporte_gymbross@gmail.com.
+
+3.- Mecanismos de Seguridad
+Para garantizar el correcto resguardo de sus datos personales y para dar pleno cumplimiento a las obligaciones que la LFPDPPP establece en la materia, se le informa que GYMBRO'S tiene implementadas las medidas de seguridad administrativas, técnicas y lógicas necesarias (tales como encriptación de contraseñas, conexiones seguras HTTPS y bases de datos protegidas) para la correcta protección de la información contra daño, pérdida, alteración, destrucción o el uso, acceso o tratamiento no autorizado.
+
+4.- Ejercicio de derechos ARCO
+Usted puede ejercer ante GYMBRO'S, en cualquier momento, sus derechos de Acceso, Rectificación, Cancelación y/o Oposición (ARCO) al tratamiento de sus datos personales mediante solicitud por escrito que deberá ser enviada al correo electrónico soporte_gymbross@gmail.com, incluyendo por lo menos:
+(a) nombre y correo electrónico para comunicarle la respuesta a su solicitud;
+(b) los documentos digitales que acrediten su identidad;
+(c) la descripción clara y precisa de los datos personales respecto de los que se solicita ejercer alguno de los derechos ARCO;
+(d) la manifestación expresa del derecho que quiere ejercer;
+(e) cualquier otro elemento que facilite la localización de los datos personales en nuestros sistemas.
+
+5.- Transferencias
+GYMBRO'S podrá transferir sus datos personales a proveedores de infraestructura tecnológica (tales como servicios de alojamiento web y bases de datos en la nube, ej. Vercel, MongoDB, Hostinger) única y exclusivamente para mantener el funcionamiento operativo de la aplicación.
+
+En ningún caso GYMBRO'S comercializará, venderá o transferirá los datos personales o métricas de entrenamiento de sus Usuarios a un tercero ajeno a la operación de la plataforma sin el consentimiento previo y expreso de los titulares.
+
+6.- Uso de Cookies y/o web beacons
+Utilizamos cookies, tokens de sesión y otras tecnologías de rastreo para mantener su sesión activa, mejorar nuestros servicios, recordar sus preferencias de interfaz y asegurar el correcto funcionamiento de la aplicación web.
+
+Hacemos notar que nuestra plataforma no usa estas tecnologías para obtener datos de identificación personal ajenos al uso de GYMBRO'S. El titular puede configurar su navegador para que no acepte cookies; sin embargo, debe tomar en cuenta que desactivarlas limitará severamente el funcionamiento de la aplicación, impidiendo el inicio de sesión y el guardado de sus rutinas.
+
+7.- Cambios al Aviso de Privacidad
+GYMBRO'S se reserva el derecho de cambiar o extender el contenido del presente Aviso de Privacidad para la atención de reformas legislativas, políticas internas de desarrollo, o nuevos requerimientos técnicos. La versión actualizada siempre estará disponible y publicada en nuestra plataforma dentro de la sección de Configuración o en el enlacegymbros.com/privacidad.
+
+8.- Consentimiento para el tratamiento
+Por medio del presente documento y por el simple hecho del registro, inicio de sesión y uso de la aplicación web GYMBRO'S, consiento el tratamiento de mis datos personales para las finalidades que me han sido informadas a través del presente Aviso de Privacidad.
