@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginUser, registerUser, resendVerificationEmail, sendPasswordReset, type UserRole } from '../lib/auth';
 import { RobotVerify } from './RobotVerify';
+import { PrivacyConsent } from './PrivacyConsent';
+import { Button } from './ui/button';
+import { getPrivacyConsentError } from '../lib/privacy';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -14,6 +17,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
   const [mode, setMode] = useState<Mode>('login');
   const [isVerified, setIsVerified] = useState(false);
   const [isVerifiedReg, setIsVerifiedReg] = useState(false);
+  const [memberPrivacyAccepted, setMemberPrivacyAccepted] = useState(false);
+  const [coachPrivacyAccepted, setCoachPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pendingEmail, setPendingEmail] = useState('');
@@ -47,6 +52,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     const age = parseInt(memberData.age);
     if (!memberData.age || isNaN(age) || age < 14 || age > 99) errs.age = 'Edad entre 14 y 99 años';
     if (!isVerifiedReg) errs.robot = 'Completa la verificación';
+    const consentError = getPrivacyConsentError(memberPrivacyAccepted);
+    if (consentError) errs.privacy = consentError;
     return errs;
   };
 
@@ -59,6 +66,8 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
     if (!coachData.certification.trim()) errs.certification = 'Certificación requerida';
     if (!coachData.experience.trim()) errs.experience = 'Experiencia requerida';
     if (!isVerifiedReg) errs.robot = 'Completa la verificación';
+    const consentError = getPrivacyConsentError(coachPrivacyAccepted);
+    if (consentError) errs.privacy = consentError;
     return errs;
   };
 
@@ -88,6 +97,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       email: memberData.email,
       password: memberData.password,
       role: 'member' as UserRole,
+      privacyAccepted: memberPrivacyAccepted,
       age: parseInt(memberData.age),
       gender: memberData.gender,
       level: memberData.level,
@@ -112,6 +122,7 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
       email: coachData.email,
       password: coachData.password,
       role: 'coach' as UserRole,
+      privacyAccepted: coachPrivacyAccepted,
       specialty: coachData.specialty,
       certification: coachData.certification,
       experience: coachData.experience,
@@ -407,9 +418,16 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                   <RobotVerify onVerified={() => setIsVerifiedReg(true)} />
                   <FieldError field="robot" />
                 </div>
-                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
+                <PrivacyConsent
+                  id="member-privacy"
+                  accepted={memberPrivacyAccepted}
+                  onChange={accepted => { setMemberPrivacyAccepted(accepted); setErrors(prev => ({ ...prev, privacy: '' })); }}
+                  error={errors.privacy}
+                  disabled={loading}
+                />
+                <Button className="w-full mb-4 h-11 font-bold" type="submit" disabled={loading || !memberPrivacyAccepted}>
                   {loading ? 'REGISTRANDO...' : 'CREAR CUENTA'}
-                </button>
+                </Button>
               </form>
               <button className="btn-ghost" onClick={() => { setMode('register-select'); setErrors({}); }} style={{ width: '100%' }}>
                 ← Volver
@@ -460,9 +478,16 @@ export function LoginScreen({ onLogin, addToast }: LoginScreenProps) {
                   <RobotVerify onVerified={() => setIsVerifiedReg(true)} />
                   <FieldError field="robot" />
                 </div>
-                <button className="btn-neon" type="submit" disabled={loading} style={{ width: '100%', marginBottom: '1rem' }}>
+                <PrivacyConsent
+                  id="coach-privacy"
+                  accepted={coachPrivacyAccepted}
+                  onChange={accepted => { setCoachPrivacyAccepted(accepted); setErrors(prev => ({ ...prev, privacy: '' })); }}
+                  error={errors.privacy}
+                  disabled={loading}
+                />
+                <Button className="w-full mb-4 h-11 font-bold" type="submit" disabled={loading || !coachPrivacyAccepted}>
                   {loading ? 'REGISTRANDO...' : 'CREAR CUENTA COACH'}
-                </button>
+                </Button>
               </form>
               <button className="btn-ghost" onClick={() => { setMode('register-select'); setErrors({}); }} style={{ width: '100%' }}>
                 ← Volver
