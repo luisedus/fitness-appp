@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { getPrivacyConsentError } from './privacy';
 
 export type UserRole = 'coach' | 'member' | 'admin';
 
@@ -51,6 +52,7 @@ export async function registerUser(data: {
   password: string;
   name: string;
   role: UserRole;
+  privacyAccepted: boolean;
   age?: number;
   gender?: string;
   level?: string;
@@ -58,6 +60,9 @@ export async function registerUser(data: {
   certification?: string;
   experience?: string;
 }): Promise<{ success: boolean; message: string }> {
+  const consentError = getPrivacyConsentError(data.privacyAccepted);
+  if (consentError) return { success: false, message: consentError };
+
   if (data.email.toLowerCase() === 'admin@admin.com') {
     return { success: false, message: 'Este email está reservado.' };
   }
