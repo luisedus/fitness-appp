@@ -4,6 +4,7 @@ import { LoginScreen } from '../components/LoginScreen';
 import { Dashboard } from '../components/Dashboard';
 import { AdminDashboard } from '../components/AdminDashboard';
 import { ToastContainer, useToasts } from '../components/ToastSystem';
+import { SocialLinks } from '../components/SocialLinks';
 
 const Index = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -77,6 +78,7 @@ const Index = () => {
       ) : (
         <LoginScreen onLogin={handleLogin} addToast={addToast} />
       )}
+      <SocialLinks />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
   );
